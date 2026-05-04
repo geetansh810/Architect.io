@@ -13,6 +13,16 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
+// Middleware to ensure DB is connected
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
+
 const getRouter = (r) => (r && r.default) ? r.default : r;
 
 app.use('/api/auth', getRouter(authRouter));
@@ -24,20 +34,11 @@ app.get('/', (req, res) => {
   res.send('🚀 Architect.io Backend is running smoothly!');
 });
 
-// Connect to MongoDB
-const startServer = async () => {
-  try {
-    await connectDB();
-    if (process.env.NODE_ENV !== 'production') {
-      app.listen(PORT, () => {
-        console.log(`🚀 Platform backend running on http://localhost:${PORT}`);
-      });
-    }
-  } catch (err) {
-    console.error('Database connection failed:', err);
-  }
-};
-
-startServer();
+// Local development listener
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`🚀 Platform backend running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;
