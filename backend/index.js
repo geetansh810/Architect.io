@@ -22,9 +22,20 @@ app.get('/', (req, res) => {
   res.send('🚀 Architect.io Backend is running smoothly!');
 });
 
-// Connect to MongoDB, then start server
-connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 Platform backend running on http://localhost:${PORT}`);
-  });
-});
+// Connect to MongoDB
+const startServer = async () => {
+  try {
+    await connectDB();
+    if (process.env.NODE_ENV !== 'production') {
+      app.listen(PORT, () => {
+        console.log(`🚀 Platform backend running on http://localhost:${PORT}`);
+      });
+    }
+  } catch (err) {
+    console.error('Database connection failed:', err);
+  }
+};
+
+startServer();
+
+export default app;
