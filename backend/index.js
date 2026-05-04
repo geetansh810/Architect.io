@@ -18,6 +18,10 @@ app.use('/api/workflows', workflowsRouter);
 app.use('/api/generate', generateRouter);
 app.use('/api/admin', adminRouter);
 
+app.get('/', (req, res) => {
+  res.send('🚀 Architect.io Backend is running smoothly!');
+});
+
 // Connect to MongoDB, then start server
 connectDB().then(() => {
   app.listen(PORT, () => {
