@@ -5,8 +5,9 @@ import { adminOnly } from '../middleware/adminOnly.js';
 
 const router = express.Router();
 
+const getMw = (m) => (m && m.default) ? m.default : m;
 // All admin routes require admin privileges
-router.use(adminOnly);
+router.use(getMw(adminOnly));
 
 // GET /api/admin/stats — Overall platform statistics
 router.get('/stats', async (req, res) => {

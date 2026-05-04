@@ -4,8 +4,9 @@ import { protect } from '../middleware/auth.js';
 
 const router = express.Router();
 
+const getMw = (m) => (m && m.default) ? m.default : m;
 // All workflow routes require authentication
-router.use(protect);
+router.use(getMw(protect));
 
 // GET all workflows for the logged-in user
 router.get('/', async (req, res) => {

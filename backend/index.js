@@ -13,10 +13,12 @@ const PORT = process.env.PORT || 4000;
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/auth', authRouter);
-app.use('/api/workflows', workflowsRouter);
-app.use('/api/generate', generateRouter);
-app.use('/api/admin', adminRouter);
+const getRouter = (r) => (r && r.default) ? r.default : r;
+
+app.use('/api/auth', getRouter(authRouter));
+app.use('/api/workflows', getRouter(workflowsRouter));
+app.use('/api/generate', getRouter(generateRouter));
+app.use('/api/admin', getRouter(adminRouter));
 
 app.get('/', (req, res) => {
   res.send('🚀 Architect.io Backend is running smoothly!');
