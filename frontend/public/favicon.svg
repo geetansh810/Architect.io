@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Background rounded square -->
+  <rect width="64" height="64" rx="14" fill="#4f46e5"/>
+  <!-- Cube / Box icon (simplified, clean) -->
+  <!-- Top face -->
+  <polygon points="32,10 52,21 32,32 12,21" fill="rgba(255,255,255,0.95)"/>
+  <!-- Left face -->
+  <polygon points="12,21 32,32 32,54 12,43" fill="rgba(255,255,255,0.55)"/>
+  <!-- Right face -->
+  <polygon points="52,21 32,32 32,54 52,43" fill="rgba(255,255,255,0.75)"/>
+</svg>
