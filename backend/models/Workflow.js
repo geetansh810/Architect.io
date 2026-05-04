@@ -23,4 +23,5 @@ workflowSchema.set('toJSON', {
 });
 
 const Workflow = mongoose.model('Workflow', workflowSchema);
+export { Workflow };
 export default Workflow;

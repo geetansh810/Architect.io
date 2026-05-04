@@ -1,6 +1,6 @@
 import express from 'express';
-import User from '../models/User.js';
-import Workflow from '../models/Workflow.js';
+import { User } from '../models/User.js';
+import { Workflow } from '../models/Workflow.js';
 import { adminOnly } from '../middleware/adminOnly.js';
 
 const router = express.Router();

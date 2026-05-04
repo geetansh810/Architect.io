@@ -1,6 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import { User } from '../models/User.js';
 import { sendOTPEmail, sendWelcomeEmail } from '../utils/email.js';
 import crypto from 'crypto';
 
