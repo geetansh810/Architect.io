@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import 'dotenv/config';
-import connectDB from './db.js';
+import { connectDB } from './db.js';
 import authRouter from './routes/auth.js';
 import workflowsRouter from './routes/workflows.js';
 import generateRouter from './routes/generate.js';
@@ -19,11 +19,7 @@ app.use(async (req, res, next) => {
     await connectDB();
     next();
   } catch (err) {
-    res.status(500).json({ 
-      error: 'Database connection failed', 
-      details: err.message,
-      hasUri: !!process.env.MONGODB_URI 
-    });
+    res.status(500).json({ error: 'Database connection failed' });
   }
 });
 
