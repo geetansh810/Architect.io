@@ -6,7 +6,6 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon --watch . --ext js index.js",
-    "stop": "kill -9 $(lsof -ti :4000) || true",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
