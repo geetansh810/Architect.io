@@ -125,7 +125,10 @@ function BuilderCanvas({ workflow }) {
         body: JSON.stringify(payload)
       });
 
-      if (!res.ok) throw new Error('Generation failed');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Generation failed');
+      }
 
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
@@ -136,7 +139,7 @@ function BuilderCanvas({ workflow }) {
       a.click();
       a.remove();
     } catch (err) {
-      alert(err.message);
+      alert('Code Generation Error: ' + err.message);
     } finally {
       setIsGenerating(false);
     }

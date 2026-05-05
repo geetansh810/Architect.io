@@ -25,13 +25,21 @@ router.post('/', (req, res) => {
       zlib: { level: 9 }
     });
 
-    res.attachment('generated-backend.zip');
-    
-    archive.on('error', (err) => {
-      res.status(500).send({ error: err.message });
+    const chunks = [];
+    archive.on('data', chunk => chunks.push(chunk));
+    archive.on('end', () => {
+      const result = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Disposition', 'attachment; filename=generated-backend.zip');
+      res.setHeader('Content-Length', result.length);
+      res.send(result);
     });
 
-    archive.pipe(res);
+    archive.on('error', (err) => {
+      if (!res.headersSent) {
+        res.status(500).send({ error: err.message });
+      }
+    });
 
     let hasAuth = !!auth;
     const createdServices = new Set();
