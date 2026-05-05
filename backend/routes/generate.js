@@ -13,7 +13,7 @@ import {
 
 const router = express.Router();
 
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
     const { entities, apis, auth, database, mailer } = req.body;
     
@@ -25,58 +25,54 @@ router.post('/', (req, res) => {
       zlib: { level: 9 }
     });
 
-    const chunks = [];
-    archive.on('data', chunk => chunks.push(chunk));
-    archive.on('end', () => {
-      const result = Buffer.concat(chunks);
-      res.setHeader('Content-Type', 'application/zip');
-      res.setHeader('Content-Disposition', 'attachment; filename=generated-backend.zip');
-      res.setHeader('Content-Length', result.length);
-      res.send(result);
-    });
+    const zipBuffer = await new Promise((resolve, reject) => {
+      const chunks = [];
+      archive.on('data', chunk => chunks.push(chunk));
+      archive.on('end', () => resolve(Buffer.concat(chunks)));
+      archive.on('error', reject);
 
-    archive.on('error', (err) => {
-      if (!res.headersSent) {
-        res.status(500).send({ error: err.message });
-      }
-    });
+      let hasAuth = !!auth;
+      const createdServices = new Set();
 
-    let hasAuth = !!auth;
-    const createdServices = new Set();
-
-    // Generate files per entity/api
-    entities.forEach(entity => {
-      archive.append(generateModel(entity), { name: `models/${entity.name}.js` });
-      
-      const api = apis.find(a => a.entityName === entity.name);
-      archive.append(generateController(entity, api || {}), { name: `controllers/${entity.name}Controller.js` });
-      
-      if (api) {
-        if (api.authEnabled) hasAuth = true;
-        archive.append(generateRoutes(api, entity), { name: `routes/${entity.name}Routes.js` });
+      // Generate files per entity/api
+      entities.forEach(entity => {
+        archive.append(generateModel(entity), { name: `models/${entity.name}.js` });
         
-        if (api.logic && api.logic.length > 0) {
-          api.logic.forEach(logicNode => {
-            const serviceName = logicNode.name.replace(/\s+/g, '') + 'Service';
-            if (!createdServices.has(serviceName)) {
-              archive.append(generateService(logicNode), { name: `services/${serviceName}.js` });
-              createdServices.add(serviceName);
-            }
-          });
+        const api = apis.find(a => a.entityName === entity.name);
+        archive.append(generateController(entity, api || {}), { name: `controllers/${entity.name}Controller.js` });
+        
+        if (api) {
+          if (api.authEnabled) hasAuth = true;
+          archive.append(generateRoutes(api, entity), { name: `routes/${entity.name}Routes.js` });
+          
+          if (api.logic && api.logic.length > 0) {
+            api.logic.forEach(logicNode => {
+              const serviceName = logicNode.name.replace(/\s+/g, '') + 'Service';
+              if (!createdServices.has(serviceName)) {
+                archive.append(generateService(logicNode), { name: `services/${serviceName}.js` });
+                createdServices.add(serviceName);
+              }
+            });
+          }
         }
+      });
+
+      if (hasAuth) {
+        archive.append(generateAuthMiddleware(), { name: 'middlewares/auth.js' });
       }
+
+      archive.append(generateAppJs(apis, hasAuth, database), { name: 'app.js' });
+      archive.append(generatePackageJson(), { name: 'package.json' });
+      archive.append(generateEnv(database, auth), { name: '.env.example' });
+      archive.append(generateEnv(database, auth), { name: '.env' });
+
+      archive.finalize();
     });
 
-    if (hasAuth) {
-      archive.append(generateAuthMiddleware(), { name: 'middlewares/auth.js' });
-    }
-
-    archive.append(generateAppJs(apis, hasAuth, database), { name: 'app.js' });
-    archive.append(generatePackageJson(), { name: 'package.json' });
-    archive.append(generateEnv(database, auth), { name: '.env.example' });
-    archive.append(generateEnv(database, auth), { name: '.env' });
-
-    archive.finalize();
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename=generated-backend.zip');
+    res.setHeader('Content-Length', zipBuffer.length);
+    res.send(zipBuffer);
 
   } catch (err) {
     res.status(500).json({ error: err.message });
