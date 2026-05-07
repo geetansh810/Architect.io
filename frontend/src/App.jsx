@@ -3,6 +3,7 @@ import { useState } from 'react';
 import Layout from './components/Layout';
 import Home from './pages/Home';
 import Login from './pages/Login';
+import Docs from './pages/Docs';
 import Dashboard from './pages/Dashboard';
 import Builder from './pages/Builder';
 import AdminDashboard from './pages/AdminDashboard';
@@ -30,6 +31,7 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
+        <Route path="/docs" element={<Docs />} />
         <Route path="/login" element={
           !user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />
         } />

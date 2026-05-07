@@ -4,6 +4,7 @@ import { Plus, Trash2, Code2, Clock, ChevronRight, Layout as LayoutIcon, Loader2
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
 import { startDashboardTour } from '../utils/tour';
+import Documentation from '../components/Documentation';
 
 export default function Dashboard() {
   const [workflows, setWorkflows] = useState([]);
@@ -367,115 +368,10 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-12 w-full"
+            className="w-full"
             id="tour-tab-docs"
           >
-            <div className="bg-brand-500 rounded-[2.5rem] p-12 text-white relative overflow-hidden shadow-2xl shadow-brand-500/20">
-              <div className="absolute top-0 right-0 p-8 opacity-10">
-                <BookOpen size={160} />
-              </div>
-              <h2 className="text-4xl font-black mb-4 relative z-10 tracking-tight">Mastering Architect.io</h2>
-              <p className="text-white/80 font-medium max-w-xl relative z-10 text-lg">
-                Learn how to build production-ready MERN stack backends visually. From entity modeling to custom business logic hooks.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="p-10 rounded-[2.5rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 transition-all group">
-                <div className="w-14 h-14 bg-emerald-500/10 text-emerald-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <Database size={28} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">1. Modeling Entities</h3>
-                <p className="text-[var(--text-muted)] leading-relaxed mb-8 font-medium">
-                  Start by dragging an **Entity Node** to the canvas. This defines your Mongoose schema. Add fields, specify data types, and set validation rules.
-                </p>
-                <ul className="space-y-4">
-                  {['Custom Field Names', 'Complex Data Types', 'Validation Rules'].map(item => (
-                    <li key={item} className="flex items-center gap-3 text-sm font-bold">
-                      <CheckCircle2 size={18} className="text-emerald-500" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-10 rounded-[2.5rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 transition-all group">
-                <div className="w-14 h-14 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <Globe size={28} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">2. Exposing APIs</h3>
-                <p className="text-[var(--text-muted)] leading-relaxed mb-8 font-medium">
-                  Connect your Entity to an **API Node** to generate CRUD endpoints. Architect automatically handles route generation and controller logic.
-                </p>
-                <ul className="space-y-4">
-                  {['RESTful Routes', 'Auth Guards', 'Controller Logic'].map(item => (
-                    <li key={item} className="flex items-center gap-3 text-sm font-bold">
-                      <CheckCircle2 size={18} className="text-blue-500" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-10 rounded-[2.5rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 transition-all group">
-                <div className="w-14 h-14 bg-indigo-500/10 text-indigo-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <Cpu size={28} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">3. Business Logic</h3>
-                <p className="text-[var(--text-muted)] leading-relaxed mb-8 font-medium">
-                  Need custom logic? Use **Logic Hooks**. Connect them to entities and choose from hooks like "before-create" or "after-delete".
-                </p>
-                <ul className="space-y-4">
-                  {['Lifecycle Hooks', 'Service Generation', 'Clean Architecture'].map(item => (
-                    <li key={item} className="flex items-center gap-3 text-sm font-bold">
-                      <CheckCircle2 size={18} className="text-indigo-500" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div className="p-10 rounded-[2.5rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 transition-all group">
-                <div className="w-14 h-14 bg-rose-500/10 text-rose-500 rounded-2xl flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <Mail size={28} />
-                </div>
-                <h3 className="text-2xl font-bold mb-4">4. Integrated Services</h3>
-                <p className="text-[var(--text-muted)] leading-relaxed mb-8 font-medium">
-                  Connect your logic to **Mailer Nodes**. Send automated order confirmations or welcome emails with zero manual configuration.
-                </p>
-                <ul className="space-y-4">
-                  {['SMTP Support', 'SendGrid Integration', 'Auto-Emails'].map(item => (
-                    <li key={item} className="flex items-center gap-3 text-sm font-bold">
-                      <CheckCircle2 size={18} className="text-rose-500" /> {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            <div className="p-12 rounded-[3rem] bg-[var(--bg-sidebar)] border border-[var(--border-main)] shadow-xl">
-              <h3 className="text-2xl font-black mb-8 tracking-tight">Deployment Guide</h3>
-              <div className="space-y-8">
-                <div className="flex gap-6">
-                  <div className="w-10 h-10 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-brand-500/20">1</div>
-                  <div>
-                    <h4 className="font-bold text-lg mb-1">Export Code</h4>
-                    <p className="text-[var(--text-muted)] font-medium leading-relaxed">Download your project as a standard Node.js/Express application with all models and routes pre-configured.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div className="w-10 h-10 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-brand-500/20">2</div>
-                  <div>
-                    <h4 className="font-bold text-lg mb-1">Install Dependencies</h4>
-                    <p className="text-[var(--text-muted)] font-medium leading-relaxed">Run `npm install` in the exported directory to install Express, Mongoose, JWT, and other required packages.</p>
-                  </div>
-                </div>
-                <div className="flex gap-6">
-                  <div className="w-10 h-10 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-black shrink-0 shadow-lg shadow-brand-500/20">3</div>
-                  <div>
-                    <h4 className="font-bold text-lg mb-1">Set Environment Variables</h4>
-                    <p className="text-[var(--text-muted)] font-medium leading-relaxed">Create a `.env` file with your `MONGODB_URI` and `JWT_SECRET` as specified in your architecture design.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <Documentation />
           </motion.div>
         )}
 

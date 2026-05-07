@@ -84,11 +84,10 @@ export default function Home() {
         </Link>
         
         <div className="hidden md:flex items-center gap-6">
-          {[{ label: 'Features', id: 'features' }, { label: 'Why Us', id: 'why-us' }, { label: 'About', id: 'about' }, { label: 'Docs', id: 'docs' }].map(({ label, id }) => (
-            <a key={label} href={`#${id}`} className="text-sm font-bold hover:text-brand-500 transition-colors">
-              {label}
-            </a>
-          ))}
+          <a href="#features" className="text-sm font-bold hover:text-brand-500 transition-colors">Features</a>
+          <a href="#why-us" className="text-sm font-bold hover:text-brand-500 transition-colors">Why Us</a>
+          <a href="#about" className="text-sm font-bold hover:text-brand-500 transition-colors">About</a>
+          <Link to="/docs" className="text-sm font-bold hover:text-brand-500 transition-colors">Docs</Link>
           <a
             href="#ai-builder"
             className="flex items-center gap-1.5 text-sm font-bold text-violet-500 hover:text-violet-400 transition-colors"
@@ -135,16 +134,10 @@ export default function Home() {
             className="fixed inset-0 z-[90] bg-[var(--bg-app)] pt-24 px-6 md:hidden"
           >
             <div className="flex flex-col gap-6">
-              {['Features', 'Process', 'About', 'Docs'].map(item => (
-                <a 
-                  key={item} 
-                  href={`#${item.toLowerCase()}`} 
-                  onClick={() => setShowMobileMenu(false)}
-                  className="text-2xl font-black hover:text-brand-500 transition-colors"
-                >
-                  {item}
-                </a>
-              ))}
+              <a href="#features" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Features</a>
+              <a href="#process" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Process</a>
+              <a href="#about" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">About</a>
+              <Link to="/docs" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Docs</Link>
               <div className="h-px bg-[var(--border-main)] my-4" />
               <Link 
                 to="/login?mode=signup" 
@@ -619,7 +612,7 @@ export default function Home() {
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Features</li>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Templates</li>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Pricing</li>
-                <li className="hover:text-brand-500 cursor-pointer transition-colors">Documentation</li>
+                <Link to="/docs" className="hover:text-brand-500 cursor-pointer transition-colors">Documentation</Link>
               </ul>
             </div>
 
