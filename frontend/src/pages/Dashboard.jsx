@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Trash2, Code2, Clock, ChevronRight, Layout as LayoutIcon, Loader2, Settings, Layers, BookOpen, Database, CheckCircle2, Globe, Cpu, Mail, Sparkles, Zap, Brain, MessageSquare, Bot, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
+import { startDashboardTour } from '../utils/tour';
 
 export default function Dashboard() {
   const [workflows, setWorkflows] = useState([]);
@@ -29,6 +30,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchWorkflows();
+    startDashboardTour();
   }, []);
 
   const createWorkflow = async () => {
@@ -112,7 +114,7 @@ export default function Dashboard() {
       className="max-w-7xl mx-auto w-full p-6 lg:p-10 h-full overflow-y-auto"
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }}>
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} id="tour-welcome-banner">
           <h1 className="text-4xl font-black tracking-tight mb-2">{activeTab}</h1>
           <p className="text-[var(--text-muted)] font-medium">
             {activeTab === 'Projects' ? 'Manage and scale your backend architectures.' :
@@ -131,6 +133,7 @@ export default function Dashboard() {
             onClick={createWorkflow}
             disabled={creating}
             className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-3 rounded-2xl flex items-center gap-2 transition-all shadow-lg shadow-brand-500/25 font-bold disabled:opacity-50"
+            id="tour-new-project-btn"
           >
             {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
             {creating ? 'Initializing...' : 'New Project'}
@@ -227,6 +230,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            id="tour-tab-templates"
           >
             {[
               {
@@ -274,12 +278,66 @@ export default function Dashboard() {
                 desc: 'Feed, Followers, and Real-time notifications.',
                 architecture: {
                   nodes: [
-                    { id: 'post', type: 'entityNode', position: { x: 400, y: 100 }, data: { name: 'Post', fields: [{ name: 'content', type: 'String' }] } },
-                    { id: 'mail', type: 'mailNode', position: { x: 100, y: 100 }, data: { provider: 'SendGrid' } },
-                    { id: 'api', type: 'apiNode', position: { x: 700, y: 100 }, data: { route: '/api/posts' } }
+                    { id: 'user', type: 'entityNode', position: { x: 100, y: 100 }, data: { name: 'User', fields: [{ name: 'username', type: 'string' }] } },
+                    { id: 'post', type: 'entityNode', position: { x: 500, y: 100 }, data: { name: 'Post', fields: [{ name: 'content', type: 'String' }] } },
+                    { id: 'api', type: 'apiNode', position: { x: 900, y: 100 }, data: { route: '/api/posts' } }
                   ],
                   edges: [
-                    { id: 'e1', source: 'post', target: 'api' }
+                    { id: 'e1', source: 'post', target: 'user', label: '1:N', data: { type: '1:N', foreignKey: 'authorId' }, style: { strokeDasharray: '5 5', stroke: '#10b981' }, animated: true },
+                    { id: 'e2', source: 'post', target: 'api', label: 'Exposes CRUD', animated: true }
+                  ]
+                }
+              },
+              {
+                name: 'High-Traffic API',
+                desc: 'Optimized for scale with Rate Limiting, Request Logging, and Security Middleware.',
+                architecture: {
+                  nodes: [
+                    { id: 'db', type: 'dbNode', position: { x: 0, y: 150 }, data: { type: 'mongodb', dbName: 'high_traffic_db' } },
+                    { id: 'mw_rate', type: 'middlewareNode', position: { x: 300, y: 0 }, data: { middlewareType: 'Rate Limiter', config: { windowMs: 60000, maxRequests: 100 } } },
+                    { id: 'mw_log', type: 'middlewareNode', position: { x: 300, y: 150 }, data: { middlewareType: 'Logger' } },
+                    { id: 'entity', type: 'entityNode', position: { x: 600, y: 75 }, data: { name: 'Metric', fields: [{ name: 'type', type: 'string' }, { name: 'value', type: 'number' }] } },
+                    { id: 'api', type: 'apiNode', position: { x: 900, y: 75 }, data: { route: '/api/v1/metrics', authEnabled: true } }
+                  ],
+                  edges: [
+                    { id: 'e1', source: 'mw_rate', target: 'api', label: 'Applies Middleware', animated: true },
+                    { id: 'e2', source: 'mw_log', target: 'api', label: 'Applies Middleware', animated: true },
+                    { id: 'e3', source: 'entity', target: 'api', label: 'Exposes CRUD', animated: true }
+                  ]
+                }
+              },
+              {
+                name: 'Asset Management SaaS',
+                desc: 'File handling and complex entity relations for digital assets.',
+                architecture: {
+                  nodes: [
+                    { id: 'storage', type: 'storageNode', position: { x: 0, y: 0 }, data: { provider: 'AWS S3', maxSizeMB: 50 } },
+                    { id: 'folder', type: 'entityNode', position: { x: 300, y: 0 }, data: { name: 'Folder', fields: [{ name: 'name', type: 'string' }] } },
+                    { id: 'asset', type: 'entityNode', position: { x: 300, y: 250 }, data: { name: 'Asset', fields: [{ name: 'filename', type: 'string' }, { name: 'url', type: 'string' }] } },
+                    { id: 'api', type: 'apiNode', position: { x: 700, y: 125 }, data: { route: '/api/assets', authEnabled: true } }
+                  ],
+                  edges: [
+                    { id: 'e1', source: 'asset', target: 'folder', label: '1:N', data: { type: '1:N', foreignKey: 'folderId' }, style: { strokeDasharray: '5 5', stroke: '#10b981' }, animated: true },
+                    { id: 'e2', source: 'asset', target: 'storage', label: 'Saves to Storage', animated: true },
+                    { id: 'e3', source: 'asset', target: 'api', label: 'Exposes CRUD', animated: true }
+                  ]
+                }
+              },
+              {
+                name: 'Event Marketing Automation',
+                desc: 'Background jobs and webhook integration for marketing flows.',
+                architecture: {
+                  nodes: [
+                    { id: 'cron', type: 'cronNode', position: { x: 0, y: 0 }, data: { jobName: 'EmailCampaign', schedule: '0 9 * * *' } },
+                    { id: 'webhook', type: 'webhookNode', position: { x: 0, y: 200 }, data: { direction: 'Incoming', provider: 'Stripe', path: '/webhooks/stripe' } },
+                    { id: 'logic', type: 'logicNode', position: { x: 400, y: 100 }, data: { name: 'Process Payment', hook: 'after-create' } },
+                    { id: 'user', type: 'entityNode', position: { x: 700, y: 100 }, data: { name: 'Subscriber', fields: [{ name: 'email', type: 'string' }, { name: 'status', type: 'string' }] } },
+                    { id: 'api', type: 'apiNode', position: { x: 1000, y: 100 }, data: { route: '/api/subscribers', authEnabled: false } }
+                  ],
+                  edges: [
+                    { id: 'e1', source: 'cron', target: 'logic', label: 'Triggers Logic', animated: true },
+                    { id: 'e2', source: 'webhook', target: 'logic', label: 'Triggers Webhook', animated: true },
+                    { id: 'e3', source: 'user', target: 'api', label: 'Exposes CRUD', animated: true }
                   ]
                 }
               }
@@ -310,6 +368,7 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="space-y-12 w-full"
+            id="tour-tab-docs"
           >
             <div className="bg-brand-500 rounded-[2.5rem] p-12 text-white relative overflow-hidden shadow-2xl shadow-brand-500/20">
               <div className="absolute top-0 right-0 p-8 opacity-10">
