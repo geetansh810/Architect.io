@@ -1,4 +1,4 @@
-export const generateModel = (entity) => {
+export const generateModel = (entity, relationships = []) => {
   const fields = entity.fields.map(f => {
     let mongooseType = 'String';
     if (f.type === 'number') mongooseType = 'Number';
@@ -6,19 +6,30 @@ export const generateModel = (entity) => {
     if (f.type === 'date') mongooseType = 'Date';
     
     return `  ${f.name}: { type: ${mongooseType}, required: ${f.required ? 'true' : 'false'} }`;
-  }).join(',\n');
+  });
+
+  // Add relationship fields
+  relationships.forEach(rel => {
+    if (rel.type === '1:N' || rel.type === '1:1') {
+      fields.push(`  ${rel.foreignKey}: { type: mongoose.Schema.Types.ObjectId, ref: '${rel.refEntity}' }`);
+    } else if (rel.type === 'N:M') {
+      fields.push(`  ${rel.foreignKey}: [{ type: mongoose.Schema.Types.ObjectId, ref: '${rel.refEntity}' }]`);
+    }
+  });
+
+  const fieldsString = fields.join(',\n');
 
   return `const mongoose = require('mongoose');
 
 const ${entity.name}Schema = new mongoose.Schema({
-${fields}
+${fieldsString}
 }, { timestamps: true });
 
 module.exports = mongoose.model('${entity.name}', ${entity.name}Schema);
 `;
 };
 
-export const generateController = (entity, api = {}) => {
+export const generateController = (entity, api = {}, relationships = []) => {
   const logic = api.logic || [];
   
   // Group logic by hook
@@ -33,23 +44,25 @@ export const generateController = (entity, api = {}) => {
   });
 
   const imports = logic.map(l => {
-    const serviceName = l.name.replace(/\\s+/g, '') + 'Service';
+    const serviceName = l.name.replace(/\s+/g, '') + 'Service';
     return `const ${serviceName} = require('../services/${serviceName}');`;
   }).filter((v, i, a) => a.indexOf(v) === i).join('\n');
 
   const invokeHooks = (hookName, dataVar) => {
     return hooks[hookName].map(l => {
-      const serviceName = l.name.replace(/\\s+/g, '') + 'Service';
+      const serviceName = l.name.replace(/\s+/g, '') + 'Service';
       return `    await ${serviceName}.execute(${dataVar});`;
     }).join('\n');
   };
+
+  const populateString = relationships.map(rel => `.populate('${rel.foreignKey}')`).join('');
 
   return `const ${entity.name} = require('../models/${entity.name}');
 ${imports}
 
 exports.getAll = async (req, res) => {
   try {
-    const data = await ${entity.name}.find();
+    const data = await ${entity.name}.find()${populateString};
     res.json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -58,7 +71,7 @@ exports.getAll = async (req, res) => {
 
 exports.getById = async (req, res) => {
   try {
-    const data = await ${entity.name}.findById(req.params.id);
+    const data = await ${entity.name}.findById(req.params.id)${populateString};
     if (!data) return res.status(404).json({ error: 'Not found' });
     res.json(data);
   } catch (err) {
@@ -146,10 +159,97 @@ exports.protect = (req, res, next) => {
 `;
 };
 
-export const generateAppJs = (apis, hasAuth, database = null) => {
+export const generateMiddleware = (middleware) => {
+  if (middleware.middlewareType === 'Rate Limiter') {
+    return `const rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: ${middleware.config?.windowMs || 900000},
+  max: ${middleware.config?.maxRequests || 100},
+  message: 'Too many requests from this IP, please try again later.'
+});
+
+module.exports = limiter;
+`;
+  }
+  
+  if (middleware.middlewareType === 'Logger') {
+    return `const morgan = require('morgan');
+module.exports = morgan('dev');
+`;
+  }
+
+  return `module.exports = (req, res, next) => {
+  console.log('Custom Middleware Executing...');
+  next();
+};`;
+};
+
+export const generateStorageMiddleware = (storage) => {
+  return `const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/');
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: ${storage.maxSizeMB || 5} * 1024 * 1024 }
+});
+
+module.exports = upload;
+`;
+};
+
+export const generateCronJob = (job) => {
+  return `const cron = require('node-cron');
+
+// Job: ${job.jobName}
+cron.schedule('${job.schedule || '0 0 * * *'}', () => {
+  console.log('Running recurring job: ${job.jobName}');
+  // TODO: Implement your job logic here
+});
+`;
+};
+
+export const generateWebhook = (webhook) => {
+  return `const express = require('express');
+const router = express.Router();
+
+// Webhook for ${webhook.provider} (${webhook.direction})
+router.post('${webhook.path || '/webhooks'}', (req, res) => {
+  const event = req.body;
+  console.log('Received ${webhook.provider} webhook event:', event.type);
+  
+  // TODO: Verify signature and process event
+  
+  res.status(200).send({ received: true });
+});
+
+module.exports = router;
+`;
+};
+
+export const generateAppJs = (payload) => {
+  const { apis, database, middlewares, storage, cronJobs, webhooks } = payload;
+  
   const routeImports = apis.map(api => `const ${api.entityName}Routes = require('./routes/${api.entityName}Routes');`).join('\n');
   const routeUses = apis.map(api => `app.use('${api.route}', ${api.entityName}Routes);`).join('\n');
   
+  const middlewareImports = (middlewares || []).map((m, i) => `const middleware${i} = require('./middlewares/middleware${i}');`).join('\n');
+  const middlewareUses = (middlewares || []).map((m, i) => `app.use(middleware${i});`).join('\n');
+
+  const webhookImports = (webhooks || []).map((w, i) => `const webhook${i} = require('./webhooks/webhook${i}');`).join('\n');
+  const webhookUses = (webhooks || []).map((w, i) => `app.use(webhook${i});`).join('\n');
+
+  const cronImports = (cronJobs || []).map((c, i) => `require('./jobs/job${i}');`).join('\n');
+
   const dbType = database?.type || 'mongodb';
   const dbUriDefault = dbType === 'mongodb' 
     ? 'mongodb://localhost:27017/backendflow' 
@@ -165,6 +265,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Middlewares
+${middlewareImports}
+${middlewareUses}
+
+// Webhooks
+${webhookImports}
+${webhookUses}
+
 // Connect to Database
 mongoose.connect(process.env.DB_URI || '${dbUriDefault}')
   .then(() => console.log('${dbType === 'mongodb' ? 'MongoDB' : 'Database'} Connected'))
@@ -172,36 +280,54 @@ mongoose.connect(process.env.DB_URI || '${dbUriDefault}')
 
 // Routes
 ${routeImports}
-
 ${routeUses}
+
+// Cron Jobs
+${cronImports}
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(\`Server running on port \${PORT}\`));
 `;
 };
 
-export const generatePackageJson = () => {
-  return `{
-  "name": "generated-backend",
-  "version": "1.0.0",
-  "description": "Generated with BackendFlow",
-  "main": "app.js",
-  "scripts": {
-    "start": "node app.js",
-    "dev": "nodemon app.js"
-  },
-  "dependencies": {
+export const generatePackageJson = (payload) => {
+  const { middlewares, storage, cronJobs } = payload;
+  
+  const deps = {
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "mongoose": "^7.5.0",
     "jsonwebtoken": "^9.0.2"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+  };
+
+  if (middlewares?.some(m => m.middlewareType === 'Rate Limiter')) {
+    deps["express-rate-limit"] = "^7.1.5";
   }
-}
-`;
+  if (middlewares?.some(m => m.middlewareType === 'Logger')) {
+    deps["morgan"] = "^1.10.0";
+  }
+  if (storage?.length > 0) {
+    deps["multer"] = "^1.4.5-lts.1";
+  }
+  if (cronJobs?.length > 0) {
+    deps["node-cron"] = "^3.0.3";
+  }
+
+  return JSON.stringify({
+    name: "generated-backend",
+    version: "1.0.0",
+    description: "Generated with BackendFlow",
+    main: "app.js",
+    scripts: {
+      "start": "node app.js",
+      "dev": "nodemon app.js"
+    },
+    dependencies: deps,
+    devDependencies: {
+      "nodemon": "^3.0.1"
+    }
+  }, null, 2);
 };
 
 export const generateEnv = (database = null, auth = null) => {
@@ -221,7 +347,6 @@ export const generateService = (logicNode) => {
 exports.execute = async (data) => {
   console.log('Executing ${logicNode.name} logic...');
   // TODO: Implement your custom business logic here
-  // Data available: ', data
   
   return true;
 };
