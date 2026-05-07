@@ -1,5 +1,6 @@
-import { Database, Shield, Mail, Cpu, Globe, Info, X } from 'lucide-react';
+import { Database, Shield, Mail, Cpu, Globe, Info, X, Filter, Upload, Clock, Webhook, PlayCircle } from 'lucide-react';
 import { useState } from 'react';
+import { startBuilderTour } from '../utils/tour';
 
 const nodeDocs = {
   entityNode: {
@@ -37,6 +38,30 @@ const nodeDocs = {
     desc: 'Configure email providers like SendGrid or SMTP.',
     usage: 'Set API keys and sender identities.',
     variables: 'provider (String), fromEmail (String)'
+  },
+  middlewareNode: {
+    title: 'Middleware',
+    desc: 'Add reusable logic to your request-response cycle.',
+    usage: 'Place between Entity and API nodes to add logging, rate limiting, or validation.',
+    variables: 'middlewareType (Enum), config (Object)'
+  },
+  storageNode: {
+    title: 'File Storage',
+    desc: 'Handle file uploads and cloud storage integration.',
+    usage: 'Configure max file sizes and storage providers like AWS S3 or Cloudinary.',
+    variables: 'provider (String), maxSizeMB (Number)'
+  },
+  cronNode: {
+    title: 'Scheduler',
+    desc: 'Execute tasks on a recurring schedule.',
+    usage: 'Define visual schedules (Daily, Hourly) or custom cron expressions.',
+    variables: 'jobName (String), schedule (String)'
+  },
+  webhookNode: {
+    title: 'Webhook',
+    desc: 'Send or receive automated event-driven HTTP requests.',
+    usage: 'Integrate with third-party services like Stripe, GitHub, or Slack.',
+    variables: 'direction (Enum), provider (String)'
   }
 };
 
@@ -78,7 +103,7 @@ export default function NodeSidebar() {
     <aside className="h-full w-72 border-r border-[var(--border-main)] bg-[var(--bg-sidebar)] p-6 flex flex-col gap-8 shrink-0 relative overflow-y-auto">
       <div>
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Core Entities</h3>
-        <div className="space-y-3">
+        <div className="space-y-3" id="tour-core-nodes">
           <NodeItem type="entityNode" icon={Database} label="Data Model" color="bg-emerald-500" />
           <NodeItem type="apiNode" icon={Globe} label="API Route" color="bg-blue-500" />
         </div>
@@ -86,10 +111,11 @@ export default function NodeSidebar() {
 
       <div>
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Architecture</h3>
-        <div className="space-y-3">
+        <div className="space-y-3" id="tour-arch-nodes">
           <NodeItem type="authNode" icon={Shield} label="Auth Guard" color="bg-amber-500" />
           <NodeItem type="dbNode" icon={Database} label="Database" color="bg-slate-700" />
           <NodeItem type="mailNode" icon={Mail} label="Mailer" color="bg-rose-500" />
+          <NodeItem type="middlewareNode" icon={Filter} label="Middleware" color="bg-cyan-500" />
         </div>
       </div>
 
@@ -97,14 +123,32 @@ export default function NodeSidebar() {
         <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Operations</h3>
         <div className="space-y-3">
           <NodeItem type="logicNode" icon={Cpu} label="Logic Hook" color="bg-indigo-500" />
+          <NodeItem type="cronNode" icon={Clock} label="Scheduler" color="bg-purple-500" />
         </div>
       </div>
 
-      <div className="mt-auto p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10">
-        <p className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-1">Pro Tip</p>
-        <p className="text-xs text-[var(--text-muted)] leading-tight">
-          Drag nodes to the canvas to start architecting. Click the info icon for documentation.
-        </p>
+      <div>
+        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Integrations</h3>
+        <div className="space-y-3">
+          <NodeItem type="storageNode" icon={Upload} label="File Upload" color="bg-orange-500" />
+          <NodeItem type="webhookNode" icon={Webhook} label="Webhook" color="bg-fuchsia-500" />
+        </div>
+      </div>
+
+      <div className="mt-auto space-y-3">
+        <button
+          onClick={() => startBuilderTour(true)}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-500/10 text-brand-500 border border-brand-500/20 font-bold hover:bg-brand-500/20 transition-all"
+        >
+          <PlayCircle size={18} />
+          Take a Tour
+        </button>
+        <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10">
+          <p className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-1">Pro Tip</p>
+          <p className="text-xs text-[var(--text-muted)] leading-tight">
+            Drag nodes to the canvas to start architecting. Click the info icon for documentation.
+          </p>
+        </div>
       </div>
 
       {/* Documentation Overlay */}

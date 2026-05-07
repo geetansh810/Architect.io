@@ -8,7 +8,11 @@ import {
   Shield, 
   Mail, 
   Cpu, 
-  Info
+  Info,
+  Filter,
+  Upload,
+  Clock,
+  Webhook
 } from 'lucide-react';
 
 const InputWrapper = ({ label, children, description }) => (
@@ -201,7 +205,7 @@ export default function PropertiesPanel({ nodeId }) {
               <select
                 value={node.data.method}
                 onChange={(e) => updateNodeData(node.id, { method: e.target.value })}
-                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] focus:border-brand-500 rounded-xl py-3 px-4 outline-none font-bold transition-all text-[var(--text-main)]"
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
               >
                 <option value="JWT">JWT (JSON Web Token)</option>
                 <option value="OAuth2">OAuth 2.0</option>
@@ -289,21 +293,150 @@ export default function PropertiesPanel({ nodeId }) {
           </div>
         );
 
+      case 'middlewareNode':
+        return (
+          <div className="space-y-8">
+            <InputWrapper label="Middleware Type">
+              <select
+                value={node.data.middlewareType}
+                onChange={(e) => updateNodeData(node.id, { middlewareType: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+              >
+                <option value="Rate Limiter">Rate Limiter</option>
+                <option value="Logger">Request Logger (Morgan)</option>
+                <option value="CORS">CORS Configuration</option>
+                <option value="Validator">Input Validator</option>
+                <option value="Custom">Custom Middleware</option>
+              </select>
+            </InputWrapper>
+            {node.data.middlewareType === 'Rate Limiter' && (
+              <>
+                <InputWrapper label="Window (ms)" description="Time frame for limit (e.g. 900000 for 15m)">
+                  <input
+                    type="number"
+                    value={node.data.config?.windowMs}
+                    onChange={(e) => updateNodeData(node.id, { config: { ...node.data.config, windowMs: parseInt(e.target.value) } })}
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+                  />
+                </InputWrapper>
+                <InputWrapper label="Max Requests" description="Requests allowed per window">
+                  <input
+                    type="number"
+                    value={node.data.config?.maxRequests}
+                    onChange={(e) => updateNodeData(node.id, { config: { ...node.data.config, maxRequests: parseInt(e.target.value) } })}
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+                  />
+                </InputWrapper>
+              </>
+            )}
+          </div>
+        );
+
+      case 'storageNode':
+        return (
+          <div className="space-y-8">
+            <InputWrapper label="Storage Provider">
+              <select
+                value={node.data.provider}
+                onChange={(e) => updateNodeData(node.id, { provider: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+              >
+                <option value="Local (Multer)">Local Disk (Multer)</option>
+                <option value="AWS S3">Amazon S3</option>
+                <option value="Cloudinary">Cloudinary</option>
+              </select>
+            </InputWrapper>
+            <InputWrapper label="Max File Size (MB)">
+              <input
+                type="number"
+                value={node.data.maxSizeMB}
+                onChange={(e) => updateNodeData(node.id, { maxSizeMB: parseInt(e.target.value) })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+              />
+            </InputWrapper>
+          </div>
+        );
+
+      case 'cronNode':
+        return (
+          <div className="space-y-8">
+            <InputWrapper label="Job Name">
+              <input
+                type="text"
+                value={node.data.jobName}
+                onChange={(e) => updateNodeData(node.id, { jobName: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+                placeholder="dailyCleanup"
+              />
+            </InputWrapper>
+            <InputWrapper label="Schedule (Cron Expression)" description="Standard crontab format (* * * * *)">
+              <input
+                type="text"
+                value={node.data.schedule}
+                onChange={(e) => updateNodeData(node.id, { schedule: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold font-mono text-[var(--text-main)]"
+                placeholder="0 0 * * *"
+              />
+            </InputWrapper>
+          </div>
+        );
+
+      case 'webhookNode':
+        return (
+          <div className="space-y-8">
+            <InputWrapper label="Direction">
+              <select
+                value={node.data.direction}
+                onChange={(e) => updateNodeData(node.id, { direction: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+              >
+                <option value="Incoming">Incoming (Webhooks I receive)</option>
+                <option value="Outgoing">Outgoing (Webhooks I send)</option>
+              </select>
+            </InputWrapper>
+            <InputWrapper label="Provider Preset">
+              <select
+                value={node.data.provider}
+                onChange={(e) => updateNodeData(node.id, { provider: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+              >
+                <option value="Custom">Custom Webhook</option>
+                <option value="Stripe">Stripe</option>
+                <option value="GitHub">GitHub</option>
+                <option value="Slack">Slack</option>
+              </select>
+            </InputWrapper>
+            <InputWrapper label="Endpoint Path / URL">
+              <input
+                type="text"
+                value={node.data.path}
+                onChange={(e) => updateNodeData(node.id, { path: e.target.value })}
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl py-3 px-4 outline-none font-bold text-[var(--text-main)]"
+                placeholder="/api/webhooks/stripe"
+              />
+            </InputWrapper>
+          </div>
+        );
+
       default:
         return null;
     }
   };
 
-const NodeTypeIcon = ({ type }) => {
-  switch (type) {
-    case 'entityNode': return <Database className="text-emerald-500" />;
-    case 'apiNode': return <Globe className="text-blue-500" />;
-    case 'logicNode': return <Cpu className="text-indigo-500" />;
-    case 'authNode': return <Shield className="text-amber-500" />;
-    case 'mailNode': return <Mail className="text-rose-500" />;
-    default: return <Settings2 />;
-  }
-};
+  const NodeTypeIcon = ({ type }) => {
+    switch (type) {
+      case 'entityNode': return <Database className="text-emerald-500" />;
+      case 'apiNode': return <Globe className="text-blue-500" />;
+      case 'logicNode': return <Cpu className="text-indigo-500" />;
+      case 'authNode': return <Shield className="text-amber-500" />;
+      case 'mailNode': return <Mail className="text-rose-500" />;
+      case 'middlewareNode': return <Filter className="text-cyan-500" />;
+      case 'storageNode': return <Upload className="text-orange-500" />;
+      case 'cronNode': return <Clock className="text-purple-500" />;
+      case 'webhookNode': return <Webhook className="text-fuchsia-500" />;
+      default: return <Settings2 />;
+    }
+  };
 
   return (
     <div className="h-full flex flex-col bg-[var(--bg-surface)]">
