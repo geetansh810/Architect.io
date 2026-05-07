@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArchitectureProvider, useArchitecture } from '../context/ArchitectureContext';
 import NodeSidebar from '../components/NodeSidebar';
 import PropertiesPanel from '../components/PropertiesPanel';
+import RelationshipModal from '../components/RelationshipModal';
 
 // Node Components
 import EntityNode from '../components/nodes/EntityNode';
@@ -23,6 +24,10 @@ import AuthNode from '../components/nodes/AuthNode';
 import DbNode from '../components/nodes/DbNode';
 import MailNode from '../components/nodes/MailNode';
 import LogicNode from '../components/nodes/LogicNode';
+import MiddlewareNode from '../components/nodes/MiddlewareNode';
+import StorageNode from '../components/nodes/StorageNode';
+import CronNode from '../components/nodes/CronNode';
+import WebhookNode from '../components/nodes/WebhookNode';
 
 import {
   Download,
@@ -39,6 +44,7 @@ import {
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { shadesOfPurple, vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from '../context/ThemeContext';
+import { startBuilderTour } from '../utils/tour';
 
 const nodeTypes = {
   entityNode: EntityNode,
@@ -47,6 +53,10 @@ const nodeTypes = {
   dbNode: DbNode,
   mailNode: MailNode,
   logicNode: LogicNode,
+  middlewareNode: MiddlewareNode,
+  storageNode: StorageNode,
+  cronNode: CronNode,
+  webhookNode: WebhookNode,
 };
 
 function BuilderCanvas({ workflow }) {
@@ -57,7 +67,10 @@ function BuilderCanvas({ workflow }) {
     onEdgesChange,
     onConnect,
     addNode,
-    parseToBackendPayload
+    parseToBackendPayload,
+    pendingConnection,
+    setPendingConnection,
+    confirmConnection
   } = useArchitecture();
   const { id } = useParams();
   const { theme } = useTheme();
@@ -78,6 +91,10 @@ function BuilderCanvas({ workflow }) {
 
   const onPaneClick = useCallback(() => {
     setSelectedNodeId(null);
+  }, []);
+
+  useEffect(() => {
+    startBuilderTour();
   }, []);
 
   const handleRename = async () => {
@@ -166,6 +183,7 @@ function BuilderCanvas({ workflow }) {
     <div className="flex h-full w-full bg-[var(--bg-app)] relative overflow-hidden">
       {/* Left Sidebar - Nodes */}
       <motion.div
+        id="tour-node-sidebar"
         animate={{ width: showLeftSidebar ? 288 : 0 }}
         className="h-full shrink-0 overflow-hidden border-r border-[var(--border-main)]"
       >
@@ -187,6 +205,7 @@ function BuilderCanvas({ workflow }) {
         className="flex-1 h-full relative"
         onDrop={onDrop}
         onDragOver={onDragOver}
+        id="tour-canvas"
       >
         <ReactFlow
           nodes={nodes}
@@ -249,6 +268,7 @@ function BuilderCanvas({ workflow }) {
               onClick={handleGenerate}
               disabled={isGenerating}
               className="bg-brand-500 hover:bg-brand-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50"
+              id="tour-generate-btn"
             >
               {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
               {isGenerating ? 'Building...' : 'Generate Code'}
@@ -269,6 +289,7 @@ function BuilderCanvas({ workflow }) {
       <motion.div
         animate={{ width: showRightSidebar ? 320 : 0 }}
         className="h-full shrink-0 overflow-hidden border-l border-[var(--border-main)] bg-[var(--bg-surface)]"
+        id="tour-properties-panel"
       >
         <PropertiesPanel nodeId={selectedNodeId} />
       </motion.div>
@@ -344,6 +365,14 @@ function BuilderCanvas({ workflow }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <RelationshipModal 
+        isOpen={!!pendingConnection}
+        onClose={() => setPendingConnection(null)}
+        onConfirm={confirmConnection}
+        sourceName={nodes.find(n => n.id === pendingConnection?.source)?.data.name || 'Source'}
+        targetName={nodes.find(n => n.id === pendingConnection?.target)?.data.name || 'Target'}
+      />
     </div>
   );
 }

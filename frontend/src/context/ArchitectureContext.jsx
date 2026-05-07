@@ -6,6 +6,7 @@ const ArchitectureContext = createContext();
 export function ArchitectureProvider({ children, initialData, onSave }) {
   const [nodes, setNodes] = useState(initialData?.nodes || []);
   const [edges, setEdges] = useState(initialData?.edges || []);
+  const [pendingConnection, setPendingConnection] = useState(null);
 
   // Initialize from old format if nodes don't exist but entities do (migration)
   useEffect(() => {
@@ -76,6 +77,16 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         label = `Triggers ${targetNode.data.hook || 'Logic'}`;
       } else if (targetNode?.type === 'logicNode') {
         label = 'Triggers Logic';
+      } else if (sourceNode?.type === 'middlewareNode') {
+        label = 'Applies Middleware';
+      } else if (targetNode?.type === 'storageNode') {
+        label = 'Saves to Storage';
+      } else if (targetNode?.type === 'webhookNode') {
+        label = 'Triggers Webhook';
+      } else if (sourceNode?.type === 'entityNode' && targetNode?.type === 'entityNode') {
+        // Intercept entity-entity connection
+        setPendingConnection(params);
+        return eds;
       }
       
       const newEdge = { 
@@ -91,6 +102,26 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     }),
     [nodes]
   );
+
+  const confirmConnection = (relationshipData) => {
+    if (!pendingConnection) return;
+
+    setEdges((eds) => {
+      const newEdge = { 
+        ...pendingConnection, 
+        animated: true,
+        label: relationshipData.type,
+        data: relationshipData,
+        labelStyle: { fill: '#cbd5e1', fontWeight: 500, fontSize: 10 },
+        labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 },
+        labelBgPadding: [4, 2],
+        labelBgBorderRadius: 4,
+        style: { strokeDasharray: '5 5', stroke: '#10b981' }
+      };
+      return addEdge(newEdge, eds);
+    });
+    setPendingConnection(null);
+  };
 
   const updateNodeData = (nodeId, dataUpdate) => {
     setNodes((nds) => {
@@ -133,6 +164,14 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         ? { provider: 'SMTP', fromEmail: 'noreply@app.com' }
         : type === 'logicNode'
         ? { name: 'Process Payment', hook: 'before-create' }
+        : type === 'middlewareNode'
+        ? { middlewareType: 'Rate Limiter', config: { windowMs: 15 * 60 * 1000, maxRequests: 100 } }
+        : type === 'storageNode'
+        ? { provider: 'Local (Multer)', maxSizeMB: 5, allowedTypes: ['images'] }
+        : type === 'cronNode'
+        ? { jobName: 'dailyCleanup', schedule: '0 0 * * *' }
+        : type === 'webhookNode'
+        ? { direction: 'Incoming', provider: 'Stripe', path: '/stripe-webhooks' }
         : {}
     };
     setNodes((nds) => [...nds, newNode]);
@@ -144,6 +183,11 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     let auth = null;
     let db = null;
     let mailer = null;
+    const middlewares = [];
+    const storage = [];
+    const cronJobs = [];
+    const webhooks = [];
+    const relationships = [];
 
     nodes.forEach(node => {
       if (node.type === 'entityNode') {
@@ -152,10 +196,10 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
           fields: node.data.fields || []
         });
 
-        // Find connected API node
-        const connectedEdge = edges.find(e => e.source === node.id);
-        if (connectedEdge) {
-          const targetNode = nodes.find(n => n.id === connectedEdge.target);
+        // Process all connections from this entity
+        const connectedEdges = edges.filter(e => e.source === node.id);
+        connectedEdges.forEach(edge => {
+          const targetNode = nodes.find(n => n.id === edge.target);
           if (targetNode && targetNode.type === 'apiNode') {
             const apiDef = {
               entityName: node.data.name,
@@ -177,18 +221,34 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
             });
 
             apis.push(apiDef);
+          } else if (targetNode && targetNode.type === 'entityNode') {
+            // Found a relationship edge
+            relationships.push({
+              sourceEntity: node.data.name,
+              refEntity: targetNode.data.name,
+              type: edge.data?.type || '1:N',
+              foreignKey: edge.data?.foreignKey || `${node.data.name.toLowerCase()}Id`
+            });
           }
-        }
+        });
       } else if (node.type === 'authNode') {
         auth = node.data;
       } else if (node.type === 'dbNode') {
         db = node.data;
       } else if (node.type === 'mailNode') {
         mailer = node.data;
+      } else if (node.type === 'middlewareNode') {
+        middlewares.push(node.data);
+      } else if (node.type === 'storageNode') {
+        storage.push(node.data);
+      } else if (node.type === 'cronNode') {
+        cronJobs.push(node.data);
+      } else if (node.type === 'webhookNode') {
+        webhooks.push(node.data);
       }
     });
 
-    return { entities, apis, auth, database: db, mailer };
+    return { entities, apis, auth, database: db, mailer, middlewares, storage, cronJobs, webhooks, relationships };
   };
 
   return (
@@ -201,7 +261,10 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       updateNodeData,
       addNode,
       setNodes,
-      parseToBackendPayload
+      parseToBackendPayload,
+      pendingConnection,
+      setPendingConnection,
+      confirmConnection
     }}>
       {children}
     </ArchitectureContext.Provider>
