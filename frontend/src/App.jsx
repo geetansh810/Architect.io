@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState } from 'react';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
+import Architectures from './pages/Architectures';
 import Login from './pages/Login';
 import Docs from './pages/Docs';
 import Dashboard from './pages/Dashboard';
@@ -28,10 +30,13 @@ function App() {
 
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         {/* Public routes */}
         <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
+        <Route path="/architectures" element={<Architectures />} />
         <Route path="/docs" element={<Docs />} />
+        <Route path="/template/:slug" element={<Builder isTemplate={true} />} />
         <Route path="/login" element={
           !user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />
         } />

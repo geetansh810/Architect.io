@@ -270,7 +270,7 @@ export default function Documentation({ showHeader = true }) {
              {React.createElement(sections.find(s => s.id === activeSection).icon, { size: 20 })}
              <h2 className="text-lg font-black uppercase tracking-widest">{sections.find(s => s.id === activeSection).title}</h2>
           </div>
-          <div className="prose prose-slate dark:prose-invert max-w-none">
+          <div className="max-w-none">
             {sections.find(s => s.id === activeSection)?.content}
           </div>
         </motion.div>

@@ -1,14 +1,15 @@
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Zap, 
-  Shield, 
-  Cpu, 
-  Globe, 
-  Code2, 
-  Layers, 
-  ArrowRight, 
+import { Link, useNavigate } from 'react-router-dom';
+import { templates } from '../utils/templates';
+import {
+  Zap,
+  Shield,
+  Cpu,
+  Globe,
+  Code2,
+  Layers,
+  ArrowRight,
   Mail,
   CheckCircle2,
   Database,
@@ -20,12 +21,14 @@ import {
   MousePointer2,
   ChevronDown,
   Menu,
-  X
+  X,
+  Plus
 } from 'lucide-react';
 
 export default function Home() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const targetRef = useRef(null);
+  const navigate = useNavigate();
   const { scrollYProgress } = useScroll({
     target: targetRef,
     offset: ["start start", "end start"]
@@ -71,7 +74,7 @@ export default function Home() {
       {/* Navigation */}
       <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto fixed top-0 left-0 right-0 z-[100] backdrop-blur-xl bg-[var(--bg-app)]/50 border-b border-[var(--border-main)]">
         <Link to="/" className="flex items-center gap-2 group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-2"
@@ -82,12 +85,13 @@ export default function Home() {
             <span className="text-xl font-black tracking-tighter">Architect.io</span>
           </motion.div>
         </Link>
-        
+
         <div className="hidden md:flex items-center gap-6">
           <a href="#features" className="text-sm font-bold hover:text-brand-500 transition-colors">Features</a>
           <a href="#why-us" className="text-sm font-bold hover:text-brand-500 transition-colors">Why Us</a>
           <a href="#about" className="text-sm font-bold hover:text-brand-500 transition-colors">About</a>
           <Link to="/docs" className="text-sm font-bold hover:text-brand-500 transition-colors">Docs</Link>
+          <Link to="/architectures" className="text-sm font-bold hover:text-brand-500 transition-colors">Architectures</Link>
           <a
             href="#ai-builder"
             className="flex items-center gap-1.5 text-sm font-bold text-violet-500 hover:text-violet-400 transition-colors"
@@ -114,8 +118,8 @@ export default function Home() {
               </Link>
             </motion.div>
           </div>
-          
-          <button 
+
+          <button
             onClick={() => setShowMobileMenu(!showMobileMenu)}
             className="md:hidden p-2 hover:bg-[var(--bg-surface)] rounded-xl transition-colors"
           >
@@ -138,9 +142,10 @@ export default function Home() {
               <a href="#process" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Process</a>
               <a href="#about" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">About</a>
               <Link to="/docs" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Docs</Link>
+              <Link to="/architectures" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Architectures</Link>
               <div className="h-px bg-[var(--border-main)] my-4" />
-              <Link 
-                to="/login?mode=signup" 
+              <Link
+                to="/login?mode=signup"
                 onClick={() => setShowMobileMenu(false)}
                 className="text-2xl font-black text-brand-500"
               >
@@ -168,13 +173,13 @@ export default function Home() {
             <span>The Future of Backend Engineering</span>
           </motion.div>
 
-          <motion.h1 
+          <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
             className="text-5xl md:text-[9rem] font-black tracking-tighter mb-8 leading-[1.1] md:leading-[0.9]"
           >
-            Visual <br /> 
+            Visual <br />
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-500 via-indigo-500 to-emerald-500">Architecture</span>
           </motion.h1>
 
@@ -220,7 +225,7 @@ export default function Home() {
               className="absolute group"
               style={{ top: item.top, left: item.left, right: item.right }}
             >
-              <motion.div 
+              <motion.div
                 animate={{ y: [0, -20, 0] }}
                 transition={{ duration: 4, repeat: Infinity, delay: i * 0.5 }}
                 className={`p-5 rounded-3xl ${item.color} text-white shadow-2xl shadow-${item.color.split('-')[1]}-500/30 border-4 border-white/20 backdrop-blur-sm`}
@@ -302,7 +307,7 @@ export default function Home() {
       </section>
 
       {/* Narrative Process Section */}
-      <section className="py-32 px-6">
+      <section id="process" className="py-32 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="space-y-40">
             {[
@@ -330,7 +335,7 @@ export default function Home() {
               }
             ].map((item, i) => (
               <div key={i} className={`flex flex-col lg:flex-row items-center gap-20 ${item.reverse ? 'lg:flex-row-reverse' : ''}`}>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: item.reverse ? 50 : -50 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -344,7 +349,7 @@ export default function Home() {
                     <span className="font-bold">Instant Code Validation</span>
                   </div>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: item.reverse ? -50 : 50 }}
                   whileInView={{ opacity: 1, x: 0 }}
                   viewport={{ once: true }}
@@ -553,7 +558,7 @@ export default function Home() {
               <div className="absolute top-0 left-0 w-96 h-96 bg-white blur-[100px] rounded-full -translate-x-1/2 -translate-y-1/2" />
               <div className="absolute bottom-0 right-0 w-96 h-96 bg-indigo-300 blur-[100px] rounded-full translate-x-1/2 translate-y-1/2" />
             </div>
-            
+
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -605,14 +610,15 @@ export default function Home() {
                 </a>
               </div>
             </div>
-            
+
             <div>
               <h4 className="font-black text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-8">Product</h4>
               <ul className="space-y-4 text-[var(--text-main)] font-bold">
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Features</li>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Templates</li>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Pricing</li>
-                <Link to="/docs" className="hover:text-brand-500 cursor-pointer transition-colors">Documentation</Link>
+                <Link to="/docs" className="block hover:text-brand-500 cursor-pointer transition-colors">Documentation</Link>
+                <Link to="/architectures" className="block hover:text-brand-500 cursor-pointer transition-colors">Architectures</Link>
               </ul>
             </div>
 

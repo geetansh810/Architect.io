@@ -6,6 +6,7 @@ const ArchitectureContext = createContext();
 export function ArchitectureProvider({ children, initialData, onSave }) {
   const [nodes, setNodes] = useState(initialData?.nodes || []);
   const [edges, setEdges] = useState(initialData?.edges || []);
+  const [documentation, setDocumentation] = useState(initialData?.documentation || '');
   const [pendingConnection, setPendingConnection] = useState(null);
 
   // Initialize from old format if nodes don't exist but entities do (migration)
@@ -50,9 +51,9 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
   // Auto-save
   useEffect(() => {
     if (onSave) {
-      onSave({ nodes, edges, database: 'mongodb' });
+      onSave({ nodes, edges, documentation, database: 'mongodb' });
     }
-  }, [nodes, edges]);
+  }, [nodes, edges, documentation]);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -172,6 +173,18 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         ? { jobName: 'dailyCleanup', schedule: '0 0 * * *' }
         : type === 'webhookNode'
         ? { direction: 'Incoming', provider: 'Stripe', path: '/stripe-webhooks' }
+        : type === 'cacheNode'
+        ? { provider: 'Redis', evictionPolicy: 'LRU', ttl: 3600, strategy: 'Cache-Aside' }
+        : type === 'loadBalancerNode'
+        ? { algorithm: 'Round Robin', healthPath: 'health', intervalSec: 30, sslTermination: true }
+        : type === 'cdnNode'
+        ? { provider: 'Cloudflare', redirectType: 'HTTP 302', regions: 'Global' }
+        : type === 'queueNode'
+        ? { broker: 'Kafka', topic: 'click-events', consumerGroup: 'analytics-service', partitions: 3 }
+        : type === 'counterServiceNode'
+        ? { strategy: 'Counter + Base62', encoding: 'Base62', batchSize: 1000, codeLength: 7 }
+        : type === 'replicaNode'
+        ? { replicaCount: 2, strategy: 'Read/Write Split', lagToleranceMs: 100 }
         : {}
     };
     setNodes((nds) => [...nds, newNode]);
@@ -188,6 +201,12 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     const cronJobs = [];
     const webhooks = [];
     const relationships = [];
+    const caches = [];
+    const loadBalancers = [];
+    const cdns = [];
+    const queues = [];
+    const counterServices = [];
+    const replicas = [];
 
     nodes.forEach(node => {
       if (node.type === 'entityNode') {
@@ -245,10 +264,22 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         cronJobs.push(node.data);
       } else if (node.type === 'webhookNode') {
         webhooks.push(node.data);
+      } else if (node.type === 'cacheNode') {
+        caches.push(node.data);
+      } else if (node.type === 'loadBalancerNode') {
+        loadBalancers.push(node.data);
+      } else if (node.type === 'cdnNode') {
+        cdns.push(node.data);
+      } else if (node.type === 'queueNode') {
+        queues.push(node.data);
+      } else if (node.type === 'counterServiceNode') {
+        counterServices.push(node.data);
+      } else if (node.type === 'replicaNode') {
+        replicas.push(node.data);
       }
     });
 
-    return { entities, apis, auth, database: db, mailer, middlewares, storage, cronJobs, webhooks, relationships };
+    return { entities, apis, auth, database: db, mailer, middlewares, storage, cronJobs, webhooks, relationships, caches, loadBalancers, cdns, queues, counterServices, replicas, documentation };
   };
 
   return (
@@ -264,7 +295,9 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       parseToBackendPayload,
       pendingConnection,
       setPendingConnection,
-      confirmConnection
+      confirmConnection,
+      documentation,
+      setDocumentation
     }}>
       {children}
     </ArchitectureContext.Provider>

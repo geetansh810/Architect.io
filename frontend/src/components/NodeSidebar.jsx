@@ -1,4 +1,4 @@
-import { Database, Shield, Mail, Cpu, Globe, Info, X, Filter, Upload, Clock, Webhook, PlayCircle } from 'lucide-react';
+import { Database, Shield, Mail, Cpu, Globe, Info, X, Filter, Upload, Clock, Webhook, PlayCircle, Zap, SplitSquareVertical, Globe2, Layers, Hash, Copy } from 'lucide-react';
 import { useState } from 'react';
 import { startBuilderTour } from '../utils/tour';
 
@@ -62,6 +62,42 @@ const nodeDocs = {
     desc: 'Send or receive automated event-driven HTTP requests.',
     usage: 'Integrate with third-party services like Stripe, GitHub, or Slack.',
     variables: 'direction (Enum), provider (String)'
+  },
+  cacheNode: {
+    title: 'Cache Layer',
+    desc: 'In-memory data store for sub-millisecond reads. Essential for the fast redirect path (< 100ms).',
+    usage: 'Place between API Route and Database nodes. The hot read path checks cache first, falls back to DB.',
+    variables: 'provider (String: Redis/Memcached), evictionPolicy (LRU/LFU), ttl (seconds), strategy (Cache-Aside/Write-Through)'
+  },
+  loadBalancerNode: {
+    title: 'Load Balancer',
+    desc: 'Distributes incoming traffic across multiple application server instances for horizontal scaling.',
+    usage: 'Place at the entry point of your architecture, before your API nodes.',
+    variables: 'algorithm (Round Robin/Least Connections/IP Hash), healthPath (String), intervalSec (Number)'
+  },
+  cdnNode: {
+    title: 'CDN / Edge',
+    desc: 'Content Delivery Network that caches responses at edge locations globally for minimum latency.',
+    usage: 'Place at the ingress. For URL shorteners, use 302 redirects so redirects are not cached by browsers.',
+    variables: 'provider (Cloudflare/CloudFront/Fastly), redirectType (301/302), regions (String)'
+  },
+  queueNode: {
+    title: 'Message Queue',
+    desc: 'Async message broker for decoupling write-heavy operations like click analytics from the hot redirect path.',
+    usage: 'Connect from API node (producer) to Logic Hook (consumer). Use for write-behind analytics.',
+    variables: 'broker (Kafka/SQS/RabbitMQ), topic (String), consumerGroup (String), partitions (Number)'
+  },
+  counterServiceNode: {
+    title: 'ID Generator',
+    desc: 'Distributed counter service for generating unique, sequential short codes via atomic Redis INCR + Base62 encoding.',
+    usage: 'Connect to Logic Hook nodes that create short URLs. The counter atomically allocates batches of IDs.',
+    variables: 'strategy (Counter+Base62/Hash/Snowflake), encoding (Base62/Base58), batchSize (Number), codeLength (Number)'
+  },
+  replicaNode: {
+    title: 'Read Replica',
+    desc: 'Read-only database replica to scale read throughput. Redirect path reads from replicas; writes go to primary.',
+    usage: 'Connect from your primary DB node. Set the split strategy to route reads vs writes appropriately.',
+    variables: 'replicaCount (Number), strategy (Read/Write Split), lagToleranceMs (Number)'
   }
 };
 
@@ -132,6 +168,18 @@ export default function NodeSidebar() {
         <div className="space-y-3">
           <NodeItem type="storageNode" icon={Upload} label="File Upload" color="bg-orange-500" />
           <NodeItem type="webhookNode" icon={Webhook} label="Webhook" color="bg-fuchsia-500" />
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Infrastructure</h3>
+        <div className="space-y-3">
+          <NodeItem type="cacheNode" icon={Zap} label="Cache Layer" color="bg-red-500" />
+          <NodeItem type="loadBalancerNode" icon={SplitSquareVertical} label="Load Balancer" color="bg-sky-600" />
+          <NodeItem type="cdnNode" icon={Globe2} label="CDN / Edge" color="bg-amber-500" />
+          <NodeItem type="queueNode" icon={Layers} label="Message Queue" color="bg-orange-500" />
+          <NodeItem type="counterServiceNode" icon={Hash} label="ID Generator" color="bg-violet-600" />
+          <NodeItem type="replicaNode" icon={Copy} label="Read Replica" color="bg-slate-500" />
         </div>
       </div>
 

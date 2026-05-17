@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
 import { startDashboardTour } from '../utils/tour';
 import Documentation from '../components/Documentation';
+import { templates } from '../utils/templates';
 
 export default function Dashboard() {
   const [workflows, setWorkflows] = useState([]);
@@ -233,130 +234,37 @@ export default function Dashboard() {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             id="tour-tab-templates"
           >
-            {[
-              {
-                name: 'E-Commerce Pro',
-                desc: 'A production-grade setup with Auth, Inventory Logic, Mailers, and complex Relations.',
-                architecture: {
-                  nodes: [
-                    { id: 'auth', type: 'authNode', position: { x: 0, y: 0 }, data: { method: 'JWT', expiry: '24h', secret: 'arch_secret_123' } },
-                    { id: 'db', type: 'dbNode', position: { x: 0, y: 150 }, data: { type: 'mongodb', dbName: 'architect_ecom' } },
-                    { id: 'user', type: 'entityNode', position: { x: 300, y: 0 }, data: { name: 'User', fields: [{ name: 'email', type: 'string', required: true }, { name: 'password', type: 'string', required: true }, { name: 'role', type: 'string' }] } },
-                    { id: 'prod', type: 'entityNode', position: { x: 300, y: 250 }, data: { name: 'Product', fields: [{ name: 'title', type: 'string', required: true }, { name: 'price', type: 'number', required: true }, { name: 'stock', type: 'number', required: true }] } },
-                    { id: 'order', type: 'entityNode', position: { x: 600, y: 250 }, data: { name: 'Order', fields: [{ name: 'total', type: 'number', required: true }, { name: 'status', type: 'string' }] } },
-                    { id: 'logic', type: 'logicNode', position: { x: 600, y: 450 }, data: { name: 'Process Order', hook: 'after-create' } },
-                    { id: 'mailer', type: 'mailNode', position: { x: 900, y: 450 }, data: { provider: 'SendGrid', fromEmail: 'orders@architect.io' } },
-                    { id: 'auth_api', type: 'apiNode', position: { x: 900, y: 0 }, data: { route: '/api/auth', authEnabled: false } },
-                    { id: 'prod_api', type: 'apiNode', position: { x: 900, y: 200 }, data: { route: '/api/products', authEnabled: false } },
-                    { id: 'order_api', type: 'apiNode', position: { x: 900, y: 350 }, data: { route: '/api/orders', authEnabled: true } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'user', target: 'auth' },
-                    { id: 'e2', source: 'auth', target: 'auth_api' },
-                    { id: 'e3', source: 'prod', target: 'prod_api' },
-                    { id: 'e4', source: 'order', target: 'order_api' },
-                    { id: 'e5', source: 'order', target: 'logic' },
-                    { id: 'e6', source: 'logic', target: 'mailer' }
-                  ]
-                }
-              },
-              {
-                name: 'SaaS Platform',
-                desc: 'Multi-tenant structure with subscription logic.',
-                architecture: {
-                  nodes: [
-                    { id: 'auth', type: 'authNode', position: { x: 100, y: 100 }, data: { method: 'OAuth2' } },
-                    { id: 'org', type: 'entityNode', position: { x: 400, y: 100 }, data: { name: 'Organization', fields: [{ name: 'name', type: 'String' }] } },
-                    { id: 'api', type: 'apiNode', position: { x: 700, y: 100 }, data: { route: '/api/orgs', authEnabled: true } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'org', target: 'api' }
-                  ]
-                }
-              },
-              {
-                name: 'Social Media',
-                desc: 'Feed, Followers, and Real-time notifications.',
-                architecture: {
-                  nodes: [
-                    { id: 'user', type: 'entityNode', position: { x: 100, y: 100 }, data: { name: 'User', fields: [{ name: 'username', type: 'string' }] } },
-                    { id: 'post', type: 'entityNode', position: { x: 500, y: 100 }, data: { name: 'Post', fields: [{ name: 'content', type: 'String' }] } },
-                    { id: 'api', type: 'apiNode', position: { x: 900, y: 100 }, data: { route: '/api/posts' } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'post', target: 'user', label: '1:N', data: { type: '1:N', foreignKey: 'authorId' }, style: { strokeDasharray: '5 5', stroke: '#10b981' }, animated: true },
-                    { id: 'e2', source: 'post', target: 'api', label: 'Exposes CRUD', animated: true }
-                  ]
-                }
-              },
-              {
-                name: 'High-Traffic API',
-                desc: 'Optimized for scale with Rate Limiting, Request Logging, and Security Middleware.',
-                architecture: {
-                  nodes: [
-                    { id: 'db', type: 'dbNode', position: { x: 0, y: 150 }, data: { type: 'mongodb', dbName: 'high_traffic_db' } },
-                    { id: 'mw_rate', type: 'middlewareNode', position: { x: 300, y: 0 }, data: { middlewareType: 'Rate Limiter', config: { windowMs: 60000, maxRequests: 100 } } },
-                    { id: 'mw_log', type: 'middlewareNode', position: { x: 300, y: 150 }, data: { middlewareType: 'Logger' } },
-                    { id: 'entity', type: 'entityNode', position: { x: 600, y: 75 }, data: { name: 'Metric', fields: [{ name: 'type', type: 'string' }, { name: 'value', type: 'number' }] } },
-                    { id: 'api', type: 'apiNode', position: { x: 900, y: 75 }, data: { route: '/api/v1/metrics', authEnabled: true } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'mw_rate', target: 'api', label: 'Applies Middleware', animated: true },
-                    { id: 'e2', source: 'mw_log', target: 'api', label: 'Applies Middleware', animated: true },
-                    { id: 'e3', source: 'entity', target: 'api', label: 'Exposes CRUD', animated: true }
-                  ]
-                }
-              },
-              {
-                name: 'Asset Management SaaS',
-                desc: 'File handling and complex entity relations for digital assets.',
-                architecture: {
-                  nodes: [
-                    { id: 'storage', type: 'storageNode', position: { x: 0, y: 0 }, data: { provider: 'AWS S3', maxSizeMB: 50 } },
-                    { id: 'folder', type: 'entityNode', position: { x: 300, y: 0 }, data: { name: 'Folder', fields: [{ name: 'name', type: 'string' }] } },
-                    { id: 'asset', type: 'entityNode', position: { x: 300, y: 250 }, data: { name: 'Asset', fields: [{ name: 'filename', type: 'string' }, { name: 'url', type: 'string' }] } },
-                    { id: 'api', type: 'apiNode', position: { x: 700, y: 125 }, data: { route: '/api/assets', authEnabled: true } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'asset', target: 'folder', label: '1:N', data: { type: '1:N', foreignKey: 'folderId' }, style: { strokeDasharray: '5 5', stroke: '#10b981' }, animated: true },
-                    { id: 'e2', source: 'asset', target: 'storage', label: 'Saves to Storage', animated: true },
-                    { id: 'e3', source: 'asset', target: 'api', label: 'Exposes CRUD', animated: true }
-                  ]
-                }
-              },
-              {
-                name: 'Event Marketing Automation',
-                desc: 'Background jobs and webhook integration for marketing flows.',
-                architecture: {
-                  nodes: [
-                    { id: 'cron', type: 'cronNode', position: { x: 0, y: 0 }, data: { jobName: 'EmailCampaign', schedule: '0 9 * * *' } },
-                    { id: 'webhook', type: 'webhookNode', position: { x: 0, y: 200 }, data: { direction: 'Incoming', provider: 'Stripe', path: '/webhooks/stripe' } },
-                    { id: 'logic', type: 'logicNode', position: { x: 400, y: 100 }, data: { name: 'Process Payment', hook: 'after-create' } },
-                    { id: 'user', type: 'entityNode', position: { x: 700, y: 100 }, data: { name: 'Subscriber', fields: [{ name: 'email', type: 'string' }, { name: 'status', type: 'string' }] } },
-                    { id: 'api', type: 'apiNode', position: { x: 1000, y: 100 }, data: { route: '/api/subscribers', authEnabled: false } }
-                  ],
-                  edges: [
-                    { id: 'e1', source: 'cron', target: 'logic', label: 'Triggers Logic', animated: true },
-                    { id: 'e2', source: 'webhook', target: 'logic', label: 'Triggers Webhook', animated: true },
-                    { id: 'e3', source: 'user', target: 'api', label: 'Exposes CRUD', animated: true }
-                  ]
-                }
-              }
-            ].map((t, i) => (
-              <div key={i} className="p-8 rounded-[2rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 transition-all group flex flex-col h-full">
-                <div className="w-12 h-12 bg-brand-500/10 rounded-2xl flex items-center justify-center text-brand-500 mb-6 group-hover:scale-110 transition-transform">
+            {templates.map((t, i) => (
+              <div 
+                key={i} 
+                onClick={() => navigate(`/template/${t.slug}`, { state: { from: '/dashboard?tab=Templates' } })}
+                className="relative p-8 rounded-[2rem] bg-gradient-to-b from-[var(--bg-surface)] to-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 hover:shadow-2xl hover:shadow-brand-500/20 transition-all group flex flex-col h-full cursor-pointer overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
+                  <Layers size={100} />
+                </div>
+                <div className="w-14 h-14 bg-gradient-to-br from-brand-400 to-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform shadow-lg shadow-brand-500/30">
                   <Layers size={24} />
                 </div>
-                <h3 className="text-xl font-bold mb-2">{t.name}</h3>
-                <p className="text-sm text-[var(--text-muted)] mb-8 flex-1">{t.desc}</p>
-                <button
-                  onClick={() => handleUseTemplate(t)}
-                  disabled={creating}
-                  className="w-full py-4 bg-brand-500 hover:bg-brand-600 text-white rounded-2xl font-bold transition-all shadow-lg shadow-brand-500/20 flex items-center justify-center gap-2"
-                >
-                  {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus size={18} />}
-                  Use Template
-                </button>
+                <h3 className="text-2xl font-black mb-3 group-hover:text-brand-500 transition-colors z-10">{t.name}</h3>
+                <p className="text-[var(--text-muted)] text-sm font-medium leading-relaxed mb-8 flex-1 z-10">{t.desc}</p>
+                <div className="flex gap-3 z-10">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); navigate(`/template/${t.slug}`, { state: { from: '/dashboard?tab=Templates' } }); }}
+                    className="flex-1 py-3.5 bg-[var(--bg-app)] border border-[var(--border-main)] group-hover:border-brand-500 text-center rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[var(--text-main)] hover:bg-brand-500/5"
+                  >
+                    <Globe size={18} />
+                    View
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleUseTemplate(t); }}
+                    disabled={creating}
+                    className="flex-1 py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"
+                  >
+                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus size={18} />}
+                    Use
+                  </button>
+                </div>
               </div>
             ))}
           </motion.div>

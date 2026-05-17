@@ -20,7 +20,7 @@ const router = express.Router();
 router.post('/', async (req, res) => {
   try {
     const payload = req.body;
-    const { entities, apis, auth, database, middlewares, storage, cronJobs, webhooks, relationships } = payload;
+    const { entities, apis, auth, database, middlewares, storage, cronJobs, webhooks, relationships, documentation } = payload;
     
     if (!entities || entities.length === 0) {
       return res.status(400).json({ error: 'At least one entity is required.' });
@@ -92,6 +92,10 @@ router.post('/', async (req, res) => {
       archive.append(generateEnv(database, auth), { name: '.env.example' });
       archive.append(generateEnv(database, auth), { name: '.env' });
 
+      if (documentation) {
+        archive.append(documentation, { name: 'README.md' });
+      }
+
       archive.finalize();
     });
 
@@ -109,7 +113,7 @@ router.post('/', async (req, res) => {
 router.post('/preview', (req, res) => {
   try {
     const payload = req.body;
-    const { entities, apis, auth, database, relationships } = payload;
+    const { entities, apis, auth, database, relationships, documentation } = payload;
     const preview = {};
 
     entities.forEach(entity => {
@@ -138,6 +142,10 @@ router.post('/preview', (req, res) => {
     
     preview['app.js'] = generateAppJs(payload);
     preview['package.json'] = generatePackageJson(payload);
+    
+    if (documentation) {
+      preview['README.md'] = documentation;
+    }
 
     res.json(preview);
   } catch (err) {
