@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Terminal, Code, Server, Play } from 'lucide-react';
 import { useArchitecture } from '../context/ArchitectureContext';
-
+import { api } from '../utils/api.js';
 export default function PreviewPanel() {
   const { parseToBackendPayload, nodes, edges } = useArchitecture();
   const [activeTab, setActiveTab] = useState('api'); // 'api' | 'code'
@@ -23,9 +23,8 @@ export default function PreviewPanel() {
   const fetchCodePreview = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:4000/api/generate/preview', {
+      const res = await api('/generate/preview', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const data = await res.json();

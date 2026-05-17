@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from './components/Layout';
 import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
@@ -9,6 +9,7 @@ import Docs from './pages/Docs';
 import Dashboard from './pages/Dashboard';
 import Builder from './pages/Builder';
 import AdminDashboard from './pages/AdminDashboard';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   const [user, setUser] = useState(() => {
@@ -22,42 +23,56 @@ function App() {
     if (token) localStorage.setItem('architect_token', token);
   };
 
-  const handleLogout = () => {
+  const handleLogout = (reason) => {
     setUser(null);
     localStorage.removeItem('architect_user');
     localStorage.removeItem('architect_token');
+
+    if (reason === 'system_update') {
+      window.location.href = '/login?error=system_update';
+    }
   };
+
+  useEffect(() => {
+    const handleSystemError = () => {
+      handleLogout('system_update');
+    };
+    window.addEventListener('system-error-logout', handleSystemError);
+    return () => window.removeEventListener('system-error-logout', handleSystemError);
+  }, []);
 
   return (
     <BrowserRouter>
       <ScrollToTop />
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
-        <Route path="/architectures" element={<Architectures />} />
-        <Route path="/docs" element={<Docs />} />
-        <Route path="/template/:slug" element={<Builder isTemplate={true} />} />
-        <Route path="/login" element={
-          !user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />
-        } />
+      <ErrorBoundary>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
+          <Route path="/architectures" element={<Architectures />} />
+          <Route path="/docs" element={<Docs />} />
+          <Route path="/template/:slug" element={<Builder isTemplate={true} />} />
+          <Route path="/login" element={
+            !user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />
+          } />
 
-        {/* Protected routes */}
-        <Route path="/" element={
-          user ? <Layout user={user} onLogout={handleLogout} /> : <Navigate to="/" />
-        }>
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="workflow/:id" element={<Builder />} />
-          
-          {/* Admin only route */}
-          <Route 
-            path="admin" 
-            element={user?.role === 'Admin' ? <AdminDashboard /> : <Navigate to="/dashboard" />} 
-          />
-        </Route>
+          {/* Protected routes */}
+          <Route path="/" element={
+            user ? <Layout user={user} onLogout={handleLogout} /> : <Navigate to="/" />
+          }>
+            <Route path="dashboard" element={<Dashboard />} />
+            <Route path="workflow/:id" element={<Builder />} />
+            
+            {/* Admin only route */}
+            <Route 
+              path="admin" 
+              element={user?.role === 'Admin' ? <AdminDashboard /> : <Navigate to="/dashboard" />} 
+            />
+          </Route>
 
-        {/* Redirect for any other path */}
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          {/* Redirect for any other path */}
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </ErrorBoundary>
     </BrowserRouter>
   );
 }

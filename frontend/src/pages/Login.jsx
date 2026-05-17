@@ -34,6 +34,11 @@ export default function Login({ onLogin }) {
     if (requestedMode === 'signup' || requestedMode === 'login') {
       setMode(requestedMode);
     }
+
+    const errorParam = searchParams.get('error');
+    if (errorParam === 'system_update') {
+      setError('Session expired due to a platform update or system failure. Please sign in again.');
+    }
   }, [searchParams]);
 
   const handleSubmit = async (e) => {
