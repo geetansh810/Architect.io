@@ -367,6 +367,10 @@ export default function Login({ onLogin }) {
         </p>
 
         <p className="text-center mt-3 text-[var(--text-muted)] text-sm font-medium">
+          <Link to="/demo" className="text-brand-500 font-bold hover:underline">Try without signing up →</Link>
+        </p>
+
+        <p className="text-center mt-3 text-[var(--text-muted)] text-sm font-medium">
           ← <Link to="/" className="text-brand-500 font-bold hover:underline">Back to Home</Link>
         </p>
       </div>

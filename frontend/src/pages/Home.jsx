@@ -22,11 +22,13 @@ import {
   ChevronDown,
   Menu,
   X,
-  Plus
+  Plus,
+  Play
 } from 'lucide-react';
 
+
+
 export default function Home() {
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const targetRef = useRef(null);
   const navigate = useNavigate();
   const { scrollYProgress } = useScroll({
@@ -71,90 +73,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[var(--bg-app)] text-[var(--text-main)] overflow-x-hidden selection:bg-brand-500/30 transition-colors duration-300">
-      {/* Navigation */}
-      <nav className="flex items-center justify-between p-6 max-w-7xl mx-auto fixed top-0 left-0 right-0 z-[100] backdrop-blur-xl bg-[var(--bg-app)]/50 border-b border-[var(--border-main)]">
-        <Link to="/" className="flex items-center gap-2 group" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-2"
-          >
-            <div className="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">
-              <Box className="text-white w-6 h-6" />
-            </div>
-            <span className="text-xl font-black tracking-tighter">Architect.io</span>
-          </motion.div>
-        </Link>
-
-        <div className="hidden md:flex items-center gap-6">
-          <a href="#features" className="text-sm font-bold hover:text-brand-500 transition-colors">Features</a>
-          <a href="#why-us" className="text-sm font-bold hover:text-brand-500 transition-colors">Why Us</a>
-          <a href="#about" className="text-sm font-bold hover:text-brand-500 transition-colors">About</a>
-          <Link to="/docs" className="text-sm font-bold hover:text-brand-500 transition-colors">Docs</Link>
-          <Link to="/architectures" className="text-sm font-bold hover:text-brand-500 transition-colors">Architectures</Link>
-          <a
-            href="#ai-builder"
-            className="flex items-center gap-1.5 text-sm font-bold text-violet-500 hover:text-violet-400 transition-colors"
-          >
-            <Sparkles size={14} />
-            AI Builder
-            <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-violet-500/15 text-violet-400 rounded-md leading-none">
-              Soon
-            </span>
-          </a>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="hidden md:flex items-center gap-4">
-            <Link to="/login" className="text-sm font-bold hover:text-brand-500 transition-colors px-4 py-2">
-              Login
-            </Link>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                to="/login?mode=signup"
-                className="bg-brand-500 hover:bg-brand-600 text-white px-6 py-2.5 rounded-xl text-sm font-black shadow-lg shadow-brand-500/20 transition-all"
-              >
-                Start Free
-              </Link>
-            </motion.div>
-          </div>
-
-          <button
-            onClick={() => setShowMobileMenu(!showMobileMenu)}
-            className="md:hidden p-2 hover:bg-[var(--bg-surface)] rounded-xl transition-colors"
-          >
-            {showMobileMenu ? <X /> : <Menu />}
-          </button>
-        </div>
-      </nav>
-
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {showMobileMenu && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-[90] bg-[var(--bg-app)] pt-24 px-6 md:hidden"
-          >
-            <div className="flex flex-col gap-6">
-              <a href="#features" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Features</a>
-              <a href="#process" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Process</a>
-              <a href="#about" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">About</a>
-              <Link to="/docs" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Docs</Link>
-              <Link to="/architectures" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Architectures</Link>
-              <div className="h-px bg-[var(--border-main)] my-4" />
-              <Link
-                to="/login?mode=signup"
-                onClick={() => setShowMobileMenu(false)}
-                className="text-2xl font-black text-brand-500"
-              >
-                Start Designing Free
-              </Link>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Hero Section */}
       <section ref={targetRef} className="relative min-h-screen flex items-center justify-center pt-32 pb-20 px-6 overflow-hidden">
@@ -201,6 +119,11 @@ export default function Home() {
             <Link to="/login?mode=signup" className="w-full sm:w-auto px-12 py-6 bg-brand-500 hover:bg-brand-600 text-white rounded-[2rem] font-black text-xl transition-all shadow-2xl shadow-brand-500/30 flex items-center justify-center gap-3 group">
               Launch Builder
               <ArrowRight size={24} className="group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link to="/demo" className="w-full sm:w-auto px-12 py-6 border border-[var(--border-main)] hover:border-brand-500/50 text-[var(--text-main)] hover:text-white rounded-[2rem] font-black text-xl transition-all bg-[var(--bg-surface)] hover:bg-white/[0.06] flex items-center justify-center gap-3 group">
+              <Play size={24} className="text-brand-500 fill-brand-500/10 group-hover:scale-110 transition-transform" />
+              Try Live Demo
+              <span className="text-xs text-[var(--text-muted)] group-hover:text-gray-400 font-bold transition-colors">No account needed</span>
             </Link>
             <a href="#process" className="w-full sm:w-auto px-12 py-6 bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 rounded-[2rem] font-black text-xl transition-all flex items-center justify-center gap-3 group">
               How it works
@@ -615,10 +538,9 @@ export default function Home() {
               <h4 className="font-black text-xs uppercase tracking-[0.2em] text-[var(--text-muted)] mb-8">Product</h4>
               <ul className="space-y-4 text-[var(--text-main)] font-bold">
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Features</li>
-                <li className="hover:text-brand-500 cursor-pointer transition-colors">Templates</li>
+                <Link to="/templates" className="block hover:text-brand-500 cursor-pointer transition-colors">Templates</Link>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Pricing</li>
                 <Link to="/docs" className="block hover:text-brand-500 cursor-pointer transition-colors">Documentation</Link>
-                <Link to="/architectures" className="block hover:text-brand-500 cursor-pointer transition-colors">Architectures</Link>
               </ul>
             </div>
 

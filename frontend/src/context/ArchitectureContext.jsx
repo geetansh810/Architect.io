@@ -8,6 +8,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
   const [edges, setEdges] = useState(initialData?.edges || []);
   const [documentation, setDocumentation] = useState(initialData?.documentation || '');
   const [pendingConnection, setPendingConnection] = useState(null);
+  const [toastMessage, setToastMessage] = useState(null);
 
   // Initialize from old format if nodes don't exist but entities do (migration)
   useEffect(() => {
@@ -64,6 +65,30 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     (changes) => setEdges((eds) => applyEdgeChanges(changes, eds)),
     []
   );
+
+  const showToast = useCallback((message, type = 'info', duration = 2500) => {
+    setToastMessage({ message, type });
+    setTimeout(() => {
+      setToastMessage(null);
+    }, duration);
+  }, []);
+
+  const onNodesDelete = useCallback((deletedNodes) => {
+    const toDelete = deletedNodes.filter((n) => n.data?.deletable !== false);
+    if (toDelete.length === 0) return;
+    
+    const deletedIds = new Set(toDelete.map((n) => n.id));
+
+    // Cascade delete edges
+    setEdges((eds) =>
+      eds.filter((e) => !deletedIds.has(e.source) && !deletedIds.has(e.target))
+    );
+    
+    // Remove nodes
+    setNodes((nds) => nds.filter((n) => !deletedIds.has(n.id)));
+    
+    showToast(`${toDelete.length} node${toDelete.length > 1 ? 's' : ''} deleted`);
+  }, [showToast]);
 
   const onConnect = useCallback(
     (params) => setEdges((eds) => {
@@ -188,6 +213,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         : {}
     };
     setNodes((nds) => [...nds, newNode]);
+    return id;
   };
 
   const parseToBackendPayload = () => {
@@ -297,7 +323,10 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       setPendingConnection,
       confirmConnection,
       documentation,
-      setDocumentation
+      setDocumentation,
+      onNodesDelete,
+      toastMessage,
+      showToast
     }}>
       {children}
     </ArchitectureContext.Provider>

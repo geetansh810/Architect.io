@@ -103,13 +103,16 @@ const nodeDocs = {
 
 export default function NodeSidebar() {
   const [selectedDoc, setSelectedDoc] = useState(null);
+  const [popoverY, setPopoverY] = useState(0);
 
   const onDragStart = (event, nodeType) => {
     event.dataTransfer.setData('application/reactflow', nodeType);
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleNodeClick = (type) => {
+  const handleNodeClick = (type, event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setPopoverY(rect.top);
     setSelectedDoc(nodeDocs[type]);
   };
 
@@ -126,7 +129,7 @@ export default function NodeSidebar() {
         <span className="text-sm font-bold">{label}</span>
       </div>
       <button 
-        onClick={() => handleNodeClick(type)}
+        onClick={(e) => handleNodeClick(type, e)}
         className="p-1.5 text-[var(--text-muted)] hover:text-brand-500 hover:bg-brand-500/10 rounded-lg transition-colors"
         title="Node Info"
       >
@@ -199,42 +202,54 @@ export default function NodeSidebar() {
         </div>
       </div>
 
-      {/* Documentation Overlay */}
+      {/* Documentation Popover — fixed near clicked node */}
       {selectedDoc && (
-        <div className="absolute inset-0 bg-[var(--bg-sidebar)] z-50 p-6 animate-in slide-in-from-bottom duration-300 flex flex-col">
-          <div className="flex items-center justify-between mb-6">
-            <h4 className="text-lg font-black">{selectedDoc.title}</h4>
-            <button 
+        <div
+          className="fixed z-50 w-72 bg-[var(--bg-sidebar)] border border-[var(--border-main)] rounded-2xl shadow-2xl flex flex-col"
+          style={{
+            left: 292,
+            top: Math.max(16, Math.min(popoverY, window.innerHeight - 48)),
+            maxHeight: `calc(100vh - ${Math.max(16, Math.min(popoverY, window.innerHeight - 48))}px - 16px)`,
+          }}
+        >
+          {/* Fixed header */}
+          <div className="flex items-center justify-between p-4 border-b border-[var(--border-main)] shrink-0">
+            <h4 className="text-base font-black text-[var(--text-main)]">{selectedDoc.title}</h4>
+            <button
               onClick={() => setSelectedDoc(null)}
-              className="p-2 hover:bg-[var(--bg-app)] rounded-xl transition-colors"
+              className="p-1.5 hover:bg-[var(--bg-app)] rounded-xl transition-colors text-[var(--text-muted)] hover:text-red-500"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
-          
-          <div className="space-y-6">
+
+          {/* Scrollable content */}
+          <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-4">
             <div>
               <label className="text-[10px] font-black uppercase tracking-widest text-brand-500">Description</label>
-              <p className="text-sm mt-1 leading-relaxed">{selectedDoc.desc}</p>
-            </div>
-            
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-brand-500">How to use</label>
-              <p className="text-sm mt-1 leading-relaxed">{selectedDoc.usage}</p>
+              <p className="text-sm mt-1 leading-relaxed text-[var(--text-main)]">{selectedDoc.desc}</p>
             </div>
 
-            <div className="p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-brand-500">How to use</label>
+              <p className="text-sm mt-1 leading-relaxed text-[var(--text-main)]">{selectedDoc.usage}</p>
+            </div>
+
+            <div className="p-3 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
               <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Data Variables</label>
-              <p className="text-xs font-mono mt-1 text-brand-600 dark:text-brand-400">{selectedDoc.variables}</p>
+              <p className="text-xs font-mono mt-1 text-brand-600 dark:text-brand-400 break-words">{selectedDoc.variables}</p>
             </div>
           </div>
 
-          <button
-            onClick={() => setSelectedDoc(null)}
-            className="mt-auto w-full py-3 bg-[var(--bg-app)] hover:bg-[var(--border-main)] rounded-xl font-bold transition-colors"
-          >
-            Got it
-          </button>
+          {/* Fixed footer */}
+          <div className="p-4 border-t border-[var(--border-main)] shrink-0">
+            <button
+              onClick={() => setSelectedDoc(null)}
+              className="w-full py-2.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 rounded-xl font-bold transition-colors text-sm"
+            >
+              Got it
+            </button>
+          </div>
         </div>
       )}
     </aside>

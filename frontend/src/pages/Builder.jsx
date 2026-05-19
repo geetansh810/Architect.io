@@ -1,15 +1,16 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../utils/api.js';
 import { templates } from '../utils/templates.js';
-import ReactMarkdown from 'react-markdown';
+import { ARCHITECTURE_TEMPLATES } from '../constants/templates.js';
 import {
   ReactFlow,
   ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
-  Panel
+  Panel,
+  useReactFlow
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -18,6 +19,9 @@ import { ArchitectureProvider, useArchitecture } from '../context/ArchitectureCo
 import NodeSidebar from '../components/NodeSidebar';
 import PropertiesPanel from '../components/PropertiesPanel';
 import RelationshipModal from '../components/RelationshipModal';
+import NodeToolbarWrapper from '../components/NodeToolbarWrapper';
+import CodePreview from '../components/CodePreview';
+import { DocumentationPanel } from '../components/DocumentationPanel';
 
 // Node Components
 import EntityNode from '../components/nodes/EntityNode';
@@ -43,47 +47,42 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
-  Maximize2,
   ArrowLeft,
   Loader2,
   Code2,
   X,
-  FileCode,
   FileText,
   Plus,
-  Bold,
-  Italic,
-  List,
-  ListOrdered,
-  Link as LinkIcon,
-  Heading1,
-  Heading2,
-  Quote,
-  Code
+  BookOpen
 } from 'lucide-react';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { shadesOfPurple, vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
+
 import { useTheme } from '../context/ThemeContext';
 import { startBuilderTour } from '../utils/tour';
 
+const wrapNode = (NodeComponent) => (props) => (
+  <NodeToolbarWrapper {...props}>
+    <NodeComponent {...props} />
+  </NodeToolbarWrapper>
+);
+
 const nodeTypes = {
-  entityNode: EntityNode,
-  apiNode: ApiNode,
-  authNode: AuthNode,
-  dbNode: DbNode,
-  mailNode: MailNode,
-  logicNode: LogicNode,
-  middlewareNode: MiddlewareNode,
-  storageNode: StorageNode,
-  cronNode: CronNode,
-  webhookNode: WebhookNode,
+  entityNode: wrapNode(EntityNode),
+  apiNode: wrapNode(ApiNode),
+  authNode: wrapNode(AuthNode),
+  dbNode: wrapNode(DbNode),
+  mailNode: wrapNode(MailNode),
+  logicNode: wrapNode(LogicNode),
+  middlewareNode: wrapNode(MiddlewareNode),
+  storageNode: wrapNode(StorageNode),
+  cronNode: wrapNode(CronNode),
+  webhookNode: wrapNode(WebhookNode),
   // Infrastructure nodes
-  cacheNode: CacheNode,
-  loadBalancerNode: LoadBalancerNode,
-  cdnNode: CdnNode,
-  queueNode: QueueNode,
-  counterServiceNode: CounterServiceNode,
-  replicaNode: ReplicaNode,
+  cacheNode: wrapNode(CacheNode),
+  loadBalancerNode: wrapNode(LoadBalancerNode),
+  cdnNode: wrapNode(CdnNode),
+  queueNode: wrapNode(QueueNode),
+  counterServiceNode: wrapNode(CounterServiceNode),
+  replicaNode: wrapNode(ReplicaNode),
 };
 
 function BuilderCanvas({ workflow, isTemplate }) {
@@ -99,46 +98,22 @@ function BuilderCanvas({ workflow, isTemplate }) {
     setPendingConnection,
     confirmConnection,
     documentation,
-    setDocumentation
+    setDocumentation,
+    onNodesDelete,
+    toastMessage
   } = useArchitecture();
   const { id, slug } = useParams();
   const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const { screenToFlowPosition } = useReactFlow();
 
-  const [showDocModal, setShowDocModal] = useState(false);
-  const [docTab, setDocTab] = useState('edit'); // 'edit' | 'preview'
-  const textareaRef = useRef(null);
-
-  const insertMarkdown = (prefix, suffix = '') => {
-    if (!textareaRef.current) return;
-    const start = textareaRef.current.selectionStart;
-    const end = textareaRef.current.selectionEnd;
-    const text = documentation || '';
-    const before = text.substring(0, start);
-    const selected = text.substring(start, end);
-    const after = text.substring(end);
-
-    const newText = `${before}${prefix}${selected}${suffix}${after}`;
-    setDocumentation(newText);
-
-    // Set focus and cursor position after React re-renders
-    setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        textareaRef.current.setSelectionRange(
-          start + prefix.length,
-          end + prefix.length
-        );
-      }
-    }, 0);
-  };
+  const [showReadmeModal, setShowReadmeModal] = useState(false);
 
   const [selectedNodeId, setSelectedNodeId] = useState(null);
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
   const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [previewData, setPreviewData] = useState(null);
-  const [activePreviewFile, setActivePreviewFile] = useState(null);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
   const [tempName, setTempName] = useState(workflow.name);
@@ -177,19 +152,8 @@ function BuilderCanvas({ workflow, isTemplate }) {
     }
   };
 
-  const handlePreview = async () => {
-    try {
-      const payload = parseToBackendPayload();
-      const res = await api('/generate/preview', {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-      const data = await res.json();
-      setPreviewData(data);
-      setActivePreviewFile(Object.keys(data)[0]);
-    } catch (err) {
-      alert('Failed to generate preview');
-    }
+  const handlePreview = () => {
+    setShowPreviewModal(true);
   };
 
   const handleGenerate = async () => {
@@ -227,10 +191,14 @@ function BuilderCanvas({ workflow, isTemplate }) {
       const type = event.dataTransfer.getData('application/reactflow');
       if (!type) return;
 
-      const position = { x: event.clientX - 400, y: event.clientY - 200 };
-      addNode(type, position);
+      const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+      const newId = addNode(type, position);
+      if (newId) {
+        setSelectedNodeId(newId);
+        setShowRightSidebar(true);
+      }
     },
-    [addNode]
+    [addNode, screenToFlowPosition, setSelectedNodeId, setShowRightSidebar]
   );
 
   const onDragOver = useCallback((event) => {
@@ -239,7 +207,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
   }, []);
 
   return (
-    <div className="flex h-full w-full bg-[var(--bg-app)] relative overflow-hidden">
+    <div className={`flex h-full w-full bg-[var(--bg-app)] relative overflow-hidden ${isTemplate ? 'pt-20' : ''}`}>
       {/* Left Sidebar - Nodes */}
       <motion.div
         id="tour-node-sidebar"
@@ -272,6 +240,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
+          onNodesDelete={onNodesDelete}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
@@ -279,6 +248,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
           nodesDraggable={!isTemplate}
           nodesConnectable={!isTemplate}
           elementsSelectable={!isTemplate}
+          deleteKeyCode={['Backspace', 'Delete']}
           colorMode="system"
           fitView
         >
@@ -295,7 +265,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
               if (location.state?.from) {
                 navigate(location.state.from);
               } else {
-                navigate(isTemplate ? '/dashboard?tab=Templates' : '/dashboard');
+                navigate(isTemplate ? '/templates' : '/dashboard');
               }
             }} className="p-2 hover:bg-[var(--bg-app)] rounded-xl transition-colors text-[var(--text-main)]">
               <ArrowLeft size={18} />
@@ -325,11 +295,11 @@ function BuilderCanvas({ workflow, isTemplate }) {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => setShowDocModal(true)}
+              onClick={() => setShowReadmeModal(true)}
               className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 px-4 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 shadow-lg transition-all text-[var(--text-main)]"
             >
-              <FileText size={16} />
-              Docs
+              <BookOpen size={16} />
+              Readme
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }}
@@ -345,13 +315,30 @@ function BuilderCanvas({ workflow, isTemplate }) {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={async () => {
+                  const isLoggedIn = !!localStorage.getItem('architect_user');
+                  if (!isLoggedIn) {
+                    sessionStorage.setItem('architect_load_template', JSON.stringify({
+                      name: workflow.name,
+                      nodes: nodes,
+                      edges: edges,
+                      documentation: documentation || `# ${workflow.name}\n\n`
+                    }));
+                    navigate('/login?mode=signup');
+                    return;
+                  }
+
                   setIsGenerating(true);
                   try {
                     const res = await api('/workflows', {
                       method: 'POST',
                       body: JSON.stringify({
                         name: `${workflow.name} Project`,
-                        architecture_json: parseToBackendPayload()
+                        architecture_json: {
+                          nodes: nodes,
+                          edges: edges,
+                          documentation: documentation,
+                          database: 'mongodb'
+                        }
                       })
                     });
                     const data = await res.json();
@@ -362,6 +349,8 @@ function BuilderCanvas({ workflow, isTemplate }) {
                     }
                   } catch (e) {
                     navigate('/login');
+                  } finally {
+                    setIsGenerating(false);
                   }
                 }}
                 disabled={isGenerating}
@@ -406,7 +395,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
 
       {/* Preview Modal */}
       <AnimatePresence>
-        {previewData && (
+        {showPreviewModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -419,66 +408,34 @@ function BuilderCanvas({ workflow, isTemplate }) {
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
               className="bg-[var(--bg-surface)] w-full max-w-6xl h-full rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl flex flex-col overflow-hidden"
             >
-              <div className="p-8 border-b border-[var(--border-main)] flex items-center justify-between shrink-0">
+              <div className="p-6 border-b border-[var(--border-main)] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
                 <div className="flex items-center gap-4">
-                  <div className="p-4 bg-brand-500/10 rounded-2xl text-brand-500">
-                    <Code2 size={28} />
+                  <div className="p-3 bg-brand-500/10 rounded-2xl text-brand-500">
+                    <Code2 size={24} />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-black text-[var(--text-main)]">Architecture Preview</h2>
+                    <h2 className="text-xl font-black text-[var(--text-main)]">Architecture Preview</h2>
                     <p className="text-sm text-[var(--text-muted)] font-medium">Verify your generated backend structure</p>
                   </div>
                 </div>
                 <button
-                  onClick={() => setPreviewData(null)}
-                  className="p-3 hover:bg-[var(--bg-app)] rounded-2xl transition-colors text-[var(--text-muted)] hover:text-red-500"
+                  onClick={() => setShowPreviewModal(false)}
+                  className="p-2.5 hover:bg-[var(--bg-app)] rounded-2xl transition-colors text-[var(--text-muted)] hover:text-red-500"
                 >
-                  <X size={28} />
+                  <X size={24} />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
-                <div className="w-full md:w-72 border-r border-[var(--border-main)] overflow-y-auto p-6 space-y-1 bg-[var(--bg-sidebar)]">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-4 block">Generated Files</label>
-                  {Object.keys(previewData).map(file => (
-                    <button
-                      key={file}
-                      onClick={() => setActivePreviewFile(file)}
-                      className={`w-full text-left px-4 py-3 rounded-xl text-sm font-bold transition-colors truncate flex items-center gap-2 ${activePreviewFile === file ? 'bg-brand-500 text-white' : 'hover:bg-brand-500/5 text-[var(--text-main)]'}`}
-                      title={file}
-                    >
-                      <div className={`w-1.5 h-1.5 rounded-full ${activePreviewFile === file ? 'bg-white' : 'bg-brand-500'}`} />
-                      {file.split('/').pop()}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex-1 bg-[var(--bg-app)] overflow-auto relative">
-                  <SyntaxHighlighter
-                    language="javascript"
-                    style={theme === 'dark' ? vscDarkPlus : prism}
-                    customStyle={{
-                      margin: 0,
-                      padding: '2.5rem',
-                      fontSize: '13px',
-                      lineHeight: '1.6',
-                      backgroundColor: 'transparent',
-                      height: '100%',
-                      fontFamily: '"JetBrains Mono", "Fira Code", monospace'
-                    }}
-                    showLineNumbers={true}
-                    lineNumberStyle={{ minWidth: '3em', paddingRight: '1em', color: 'var(--text-muted)', opacity: 0.5 }}
-                  >
-                    {previewData[activePreviewFile] || ''}
-                  </SyntaxHighlighter>
-                </div>
+              <div className="flex-1 overflow-hidden">
+                <CodePreview nodes={nodes} edges={edges} />
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Documentation Modal */}
+      {/* Readme Modal — unified editable documentation */}
       <AnimatePresence>
-        {showDocModal && (
+        {showReadmeModal && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -489,75 +446,54 @@ function BuilderCanvas({ workflow, isTemplate }) {
               initial={{ scale: 0.9, opacity: 0, y: 20 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-[var(--bg-surface)] w-full max-w-4xl h-full max-h-[80vh] rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl flex flex-col overflow-hidden"
+              className="bg-[var(--bg-surface)] w-full max-w-4xl h-full rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl flex flex-col overflow-hidden"
             >
-              <div className="p-6 border-b border-[var(--border-main)] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-brand-500/10 rounded-2xl text-brand-500">
-                    <FileText size={24} />
+              <div className="p-5 border-b border-[var(--border-main)] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-brand-500/10 rounded-xl text-brand-500">
+                    <BookOpen size={20} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-[var(--text-main)]">Architecture Documentation</h2>
-                    <p className="text-sm text-[var(--text-muted)] font-medium">Detailed explanation of the system design</p>
+                    <h2 className="text-base font-black text-[var(--text-main)]">Project README</h2>
+                    <p className="text-xs text-[var(--text-muted)]">Auto-generated · editable · saved with your project</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  {!isTemplate && (
-                    <div className="flex bg-[var(--bg-app)] rounded-lg p-1 border border-[var(--border-main)] mr-4">
-                      <button
-                        onClick={() => setDocTab('edit')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${docTab === 'edit' ? 'bg-brand-500 text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => setDocTab('preview')}
-                        className={`px-4 py-1.5 rounded-md text-sm font-bold transition-all ${docTab === 'preview' ? 'bg-brand-500 text-white shadow-md' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'}`}
-                      >
-                        Preview
-                      </button>
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setShowDocModal(false)}
-                    className="p-2.5 hover:bg-[var(--bg-app)] rounded-2xl transition-colors text-[var(--text-muted)] hover:text-red-500"
-                  >
-                    <X size={24} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setShowReadmeModal(false)}
+                  className="p-2 hover:bg-[var(--bg-app)] rounded-xl transition-colors text-[var(--text-muted)] hover:text-red-500"
+                >
+                  <X size={20} />
+                </button>
               </div>
-              <div className="flex-1 overflow-y-auto bg-[var(--bg-app)] relative">
-                {(isTemplate || docTab === 'preview') ? (
-                  <div className="p-8 prose dark:prose-invert prose-brand max-w-none text-[var(--text-main)] prose-headings:text-[var(--text-main)] prose-strong:text-[var(--text-main)]">
-                    <ReactMarkdown>{documentation || '*No documentation provided.*'}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <div className="flex flex-col h-full bg-[var(--bg-app)]">
-                    <div className="flex items-center gap-1 p-2 bg-[var(--bg-sidebar)] border-b border-[var(--border-main)]">
-                      <button onClick={() => insertMarkdown('**', '**')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Bold"><Bold size={16} /></button>
-                      <button onClick={() => insertMarkdown('*', '*')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Italic"><Italic size={16} /></button>
-                      <div className="w-px h-4 bg-[var(--border-main)] mx-1" />
-                      <button onClick={() => insertMarkdown('# ')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Heading 1"><Heading1 size={16} /></button>
-                      <button onClick={() => insertMarkdown('## ')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Heading 2"><Heading2 size={16} /></button>
-                      <div className="w-px h-4 bg-[var(--border-main)] mx-1" />
-                      <button onClick={() => insertMarkdown('- ')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Bullet List"><List size={16} /></button>
-                      <button onClick={() => insertMarkdown('1. ')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Numbered List"><ListOrdered size={16} /></button>
-                      <div className="w-px h-4 bg-[var(--border-main)] mx-1" />
-                      <button onClick={() => insertMarkdown('> ')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Quote"><Quote size={16} /></button>
-                      <button onClick={() => insertMarkdown('`', '`')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Code"><Code size={16} /></button>
-                      <button onClick={() => insertMarkdown('[', '](url)')} className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors" title="Link"><LinkIcon size={16} /></button>
-                    </div>
-                    <textarea
-                      ref={textareaRef}
-                      value={documentation}
-                      onChange={(e) => setDocumentation(e.target.value)}
-                      className="flex-1 w-full bg-transparent p-8 outline-none resize-none font-mono text-sm text-[var(--text-main)]"
-                      placeholder="Write your architecture documentation here (Markdown supported)..."
-                    />
-                  </div>
-                )}
+              <div className="flex-1 overflow-hidden">
+                <DocumentationPanel
+                  nodes={nodes}
+                  edges={edges}
+                  projectName={workflow.name}
+                  documentation={documentation}
+                  setDocumentation={setDocumentation}
+                  isTemplate={isTemplate}
+                />
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.9 }}
+            className="fixed bottom-6 right-6 z-[200] bg-[var(--bg-surface)] border border-[var(--border-main)] shadow-2xl rounded-xl p-4 flex items-center gap-3"
+          >
+            <div className={`p-2 rounded-lg ${toastMessage.type === 'info' ? 'bg-brand-500/10 text-brand-500' : 'bg-red-500/10 text-red-500'}`}>
+              <FileText size={16} />
+            </div>
+            <span className="text-sm font-bold text-[var(--text-main)]">
+              {toastMessage.message}
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -588,6 +524,18 @@ export default function Builder({ isTemplate = false }) {
             name: template.name,
             architecture_json: template.architecture
           });
+        } else {
+          const customTemplate = ARCHITECTURE_TEMPLATES.find(t => t.id === slug);
+          if (customTemplate) {
+            setWorkflow({
+              name: customTemplate.name,
+              architecture_json: {
+                nodes: customTemplate.nodes,
+                edges: customTemplate.edges,
+                documentation: `# ${customTemplate.name}\n\n${customTemplate.description}`
+              }
+            });
+          }
         }
         setLoading(false);
         return;

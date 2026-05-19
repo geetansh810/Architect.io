@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
 import { startDashboardTour } from '../utils/tour';
 import Documentation from '../components/Documentation';
-import { templates } from '../utils/templates';
+import Projects from './Projects';
 
 export default function Dashboard() {
   const [workflows, setWorkflows] = useState([]);
@@ -31,9 +31,13 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
+    if (sessionStorage.getItem('architect_load_template')) {
+      navigate('/dashboard/new');
+      return;
+    }
     fetchWorkflows();
     startDashboardTour();
-  }, []);
+  }, [navigate]);
 
   const createWorkflow = async () => {
     setCreating(true);
@@ -54,14 +58,39 @@ export default function Dashboard() {
   };
 
   const deleteWorkflow = async (id, e) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!confirm('Are you sure you want to delete this project?')) return;
     try {
       await api(`/workflows/${id}`, { method: 'DELETE' });
       setWorkflows(workflows.filter(w => w.id !== id));
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const duplicateWorkflow = async (id) => {
+    try {
+      const sourceWorkflow = workflows.find(w => w.id === id);
+      if (!sourceWorkflow) return;
+      
+      const res = await api('/workflows', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `${sourceWorkflow.name} (Copy)`,
+          architecture_json: sourceWorkflow.architecture_json
+        })
+      });
+      if (!res.ok) {
+        throw new Error('Failed to duplicate project');
+      }
+      const data = await res.json();
+      setWorkflows([data, ...workflows]);
+    } catch (err) {
+      console.error(err);
+      alert('Duplicate Error: ' + err.message);
     }
   };
 
@@ -85,24 +114,6 @@ export default function Dashboard() {
     }
   };
 
-  const handleUseTemplate = async (template) => {
-    setCreating(true);
-    try {
-      const res = await api('/workflows', {
-        method: 'POST',
-        body: JSON.stringify({
-          name: `${template.name} Project`,
-          architecture_json: template.architecture
-        })
-      });
-      const data = await res.json();
-      navigate(`/workflow/${data.id}`);
-    } catch (err) {
-      console.error(err);
-      setCreating(false);
-    }
-  };
-
   if (loading) return (
     <div className="flex items-center justify-center h-full">
       <Loader2 className="w-8 h-8 animate-spin text-brand-500" />
@@ -120,7 +131,6 @@ export default function Dashboard() {
           <h1 className="text-4xl font-black tracking-tight mb-2">{activeTab}</h1>
           <p className="text-[var(--text-muted)] font-medium">
             {activeTab === 'Projects' ? 'Manage and scale your backend architectures.' :
-              activeTab === 'Templates' ? 'Start faster with pre-built architecture patterns.' :
               activeTab === 'AI Builder' ? 'Describe your backend in plain English — let AI design it.' :
                 'Learn how to build production-grade backends.'}
           </p>
@@ -151,122 +161,18 @@ export default function Dashboard() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            {workflows.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 px-6 text-center border-2 border-dashed border-[var(--border-main)] rounded-[2rem] bg-[var(--bg-surface)]">
-                <div className="w-20 h-20 bg-brand-500/10 rounded-3xl flex items-center justify-center mb-6">
-                  <LayoutIcon className="w-10 h-10 text-brand-500" />
-                </div>
-                <h3 className="text-2xl font-bold mb-2">No projects yet</h3>
-                <p className="text-[var(--text-muted)] max-w-sm mb-8">
-                  Create your first backend workflow to start generating production-ready MERN stacks.
-                </p>
-                <button
-                  onClick={createWorkflow}
-                  className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 hover:text-brand-500 px-6 py-3 rounded-xl font-bold transition-all shadow-sm"
-                >
-                  Create Project
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {workflows.map((wf, i) => (
-                  <motion.div
-                    key={wf.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                  >
-                    <div
-                      onClick={() => navigate(`/workflow/${wf.id}`)}
-                      className="bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-brand-500 p-6 rounded-3xl transition-all hover:shadow-xl hover:shadow-brand-500/5 group relative flex flex-col min-h-[180px] h-full cursor-pointer"
-                    >
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="p-3 rounded-2xl bg-brand-500/10 text-brand-500 group-hover:bg-brand-500 group-hover:text-white transition-colors">
-                          <Code2 className="w-6 h-6" />
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingWorkflow(wf);
-                              setNewName(wf.name);
-                            }}
-                            className="p-2 text-[var(--text-muted)] hover:text-brand-500 hover:bg-brand-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <Settings className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => deleteWorkflow(wf.id, e)}
-                            className="p-2 text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="flex-1">
-                        <h3 className="font-bold text-xl mb-auto line-clamp-1 group-hover:text-brand-500 transition-colors">{wf.name}</h3>
-                      </div>
-
-                      <div className="mt-6 flex items-center justify-between text-xs font-bold text-[var(--text-muted)] uppercase tracking-widest">
-                        <div className="flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5" />
-                          {new Date(wf.updated_at).toLocaleDateString()}
-                        </div>
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all text-brand-500">
-                          Open <ChevronRight className="w-3 h-3" />
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            )}
-          </motion.div>
-        )}
-
-        {activeTab === 'Templates' && (
-          <motion.div
-            key="templates"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            id="tour-tab-templates"
-          >
-            {templates.map((t, i) => (
-              <div 
-                key={i} 
-                onClick={() => navigate(`/template/${t.slug}`, { state: { from: '/dashboard?tab=Templates' } })}
-                className="relative p-8 rounded-[2rem] bg-gradient-to-b from-[var(--bg-surface)] to-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 hover:shadow-2xl hover:shadow-brand-500/20 transition-all group flex flex-col h-full cursor-pointer overflow-hidden"
-              >
-                <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:opacity-10 transition-opacity">
-                  <Layers size={100} />
-                </div>
-                <div className="w-14 h-14 bg-gradient-to-br from-brand-400 to-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 group-hover:rotate-3 transition-transform shadow-lg shadow-brand-500/30">
-                  <Layers size={24} />
-                </div>
-                <h3 className="text-2xl font-black mb-3 group-hover:text-brand-500 transition-colors z-10">{t.name}</h3>
-                <p className="text-[var(--text-muted)] text-sm font-medium leading-relaxed mb-8 flex-1 z-10">{t.desc}</p>
-                <div className="flex gap-3 z-10">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); navigate(`/template/${t.slug}`, { state: { from: '/dashboard?tab=Templates' } }); }}
-                    className="flex-1 py-3.5 bg-[var(--bg-app)] border border-[var(--border-main)] group-hover:border-brand-500 text-center rounded-xl font-bold transition-all flex items-center justify-center gap-2 text-[var(--text-main)] hover:bg-brand-500/5"
-                  >
-                    <Globe size={18} />
-                    View
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleUseTemplate(t); }}
-                    disabled={creating}
-                    className="flex-1 py-3.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold transition-all shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2"
-                  >
-                    {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus size={18} />}
-                    Use
-                  </button>
-                </div>
-              </div>
-            ))}
+            <Projects
+              projects={workflows}
+              onOpen={(id) => navigate(`/workflow/${id}`)}
+              onRename={(wf) => {
+                setEditingWorkflow(wf);
+                setNewName(wf.name);
+              }}
+              onDelete={deleteWorkflow}
+              onDuplicate={duplicateWorkflow}
+              onCreateProject={createWorkflow}
+              creating={creating}
+            />
           </motion.div>
         )}
 

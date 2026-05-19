@@ -1,66 +1,52 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import Layout from './components/Layout';
+import Navbar from './components/Navbar';
 import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
-import Architectures from './pages/Architectures';
 import Login from './pages/Login';
 import Docs from './pages/Docs';
 import Dashboard from './pages/Dashboard';
 import Builder from './pages/Builder';
 import AdminDashboard from './pages/AdminDashboard';
+import Templates from './pages/Templates';
+import CreateFromTemplate from './pages/CreateFromTemplate';
+import DemoCanvas from './pages/DemoCanvas';
+import Profile from './pages/Profile';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
+import { useAuth } from './context/AuthContext';
+
 function App() {
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('architect_user');
-    return saved ? JSON.parse(saved) : null;
-  });
-
-  const handleLogin = (userData, token) => {
-    setUser(userData);
-    localStorage.setItem('architect_user', JSON.stringify(userData));
-    if (token) localStorage.setItem('architect_token', token);
-  };
-
-  const handleLogout = (reason) => {
-    setUser(null);
-    localStorage.removeItem('architect_user');
-    localStorage.removeItem('architect_token');
-
-    if (reason === 'system_update') {
-      window.location.href = '/login?error=system_update';
-    }
-  };
-
-  useEffect(() => {
-    const handleSystemError = () => {
-      handleLogout('system_update');
-    };
-    window.addEventListener('system-error-logout', handleSystemError);
-    return () => window.removeEventListener('system-error-logout', handleSystemError);
-  }, []);
+  const { user, login, logout } = useAuth();
 
   return (
     <BrowserRouter>
       <ScrollToTop />
       <ErrorBoundary>
+        <Navbar user={user} onLogout={logout} />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={user ? <Navigate to="/dashboard" /> : <Home />} />
-          <Route path="/architectures" element={<Architectures />} />
+          <Route path="/templates" element={<Templates />} />
+          <Route path="/architectures" element={<Navigate to="/templates" replace />} />
           <Route path="/docs" element={<Docs />} />
           <Route path="/template/:slug" element={<Builder isTemplate={true} />} />
           <Route path="/login" element={
-            !user ? <Login onLogin={handleLogin} /> : <Navigate to="/dashboard" />
+            !user ? <Login onLogin={login} /> : <Navigate to="/dashboard" />
           } />
+
+          {/* Demo route — no auth required */}
+          <Route path="/demo" element={<DemoCanvas />} />
 
           {/* Protected routes */}
           <Route path="/" element={
-            user ? <Layout user={user} onLogout={handleLogout} /> : <Navigate to="/" />
+            user ? <Layout /> : <Navigate to="/" />
           }>
             <Route path="dashboard" element={<Dashboard />} />
+            <Route path="dashboard/new" element={<CreateFromTemplate />} />
             <Route path="workflow/:id" element={<Builder />} />
+            <Route path="profile" element={<Profile />} />
             
             {/* Admin only route */}
             <Route 
