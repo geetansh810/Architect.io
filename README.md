@@ -121,7 +121,7 @@ Full documentation is available at [`/docs`](./docs/index.md):
 
 I built Architect.io with the vision of making backend engineering more accessible, visual, and automated. By combining visual logic with precise code generation, I aim to help developers ship complex infrastructures faster than ever before.
 
-- **LinkedIn**: [Geetansh Agrawal](https://www.linkedin.com/in/geetanshagrawal/)
+- **LinkedIn**: [Geetansh Agrawal](https://www.linkedin.com/in/geetansh810/)
 - **GitHub**: [@geetansh810](https://github.com/geetansh810)
 - **Portfolio**: [geetansh810.github.io/portfolio](https://geetansh810.github.io/portfolio/)
 
