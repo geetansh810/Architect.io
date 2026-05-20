@@ -16,7 +16,14 @@ import {
   Clock,
   Cloud,
   Webhook,
-  Activity
+  Activity,
+  Server,
+  HardDrive,
+  Radio,
+  BarChart3,
+  Copy,
+  FileText,
+  Play
 } from 'lucide-react';
 
 const sections = [
@@ -32,12 +39,31 @@ const sections = [
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
           <div className="p-6 rounded-2xl bg-brand-500/5 border border-brand-500/10">
             <h4 className="font-bold text-brand-500 mb-2">The Vision</h4>
-            <p className="text-sm text-[var(--text-muted)]">Transform complex business logic into modular, scalable, and secure MERN stack applications using a node-based interface.</p>
+            <p className="text-sm text-[var(--text-muted)]">Transform complex business logic into modular, scalable, and secure backend applications using a node-based interface. Design entire system architectures visually and export production-ready code.</p>
           </div>
           <div className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
             <h4 className="font-bold text-indigo-500 mb-2">Core Philosophy</h4>
             <p className="text-sm text-[var(--text-muted)]">Clean architecture, modular services, and automated security should be accessible to every engineer without the boilerplate fatigue.</p>
           </div>
+        </div>
+        <div className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 mt-6">
+          <h4 className="font-bold text-emerald-500 mb-3">Platform Highlights</h4>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              '16 specialised node types',
+              '6 production-ready templates',
+              'System Design study templates',
+              'Demo mode — no account needed',
+              'Auto-generated documentation',
+              'Docker Compose & .env export',
+              'OTP email authentication',
+              'Public Roadmap & Changelog',
+            ].map(f => (
+              <li key={f} className="flex items-center gap-2 text-sm font-medium text-[var(--text-muted)]">
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" /> {f}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     )
@@ -49,23 +75,34 @@ const sections = [
     content: (
       <div className="space-y-8">
         <div className="space-y-4">
-          <h3 className="text-2xl font-bold">1. Launch the Builder</h3>
-          <p className="text-[var(--text-muted)]">Head over to your Dashboard and click on <strong>"New Project"</strong>. You can start from a blank canvas or use one of our templates like <em>E-Commerce Pro</em> or <em>SaaS Platform</em>.</p>
+          <h3 className="text-2xl font-bold">1. Try the Demo</h3>
+          <p className="text-[var(--text-muted)]">Click <strong>"Try Live Demo"</strong> on the landing page to open a pre-loaded MERN architecture on a full canvas — no account required. You can add, remove, and configure nodes, preview code, and explore documentation.</p>
+          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-sm text-[var(--text-muted)]">
+            <strong className="text-amber-500">Note:</strong> Demo progress is stored in your browser. Create an account to save, export, and manage multiple projects.
+          </div>
         </div>
         <div className="space-y-4">
-          <h3 className="text-2xl font-bold">2. Define Your Entities</h3>
-          <p className="text-[var(--text-muted)]">Drag an <strong>Entity Node</strong> to define your data models. This will generate Mongoose schemas with full validation support.</p>
+          <h3 className="text-2xl font-bold">2. Create an Account</h3>
+          <p className="text-[var(--text-muted)]">Sign up with your email. We use <strong>6-digit OTP verification</strong> — no passwords required. Once verified, you'll land on your personal Dashboard.</p>
         </div>
         <div className="space-y-4">
-          <h3 className="text-2xl font-bold">3. Export & Run</h3>
-          <p className="text-[var(--text-muted)]">Once your design is ready, click <strong>"Export Code"</strong>. Download the ZIP, run <code>npm install</code>, and start your server.</p>
+          <h3 className="text-2xl font-bold">3. Start a New Project</h3>
+          <p className="text-[var(--text-muted)]">From the Dashboard, click <strong>"New Project"</strong>. Choose to start from a blank canvas or select one of our production templates like <em>E-Commerce Platform</em>, <em>SaaS Multi-Tenant</em>, or <em>URL Shortener</em>.</p>
+        </div>
+        <div className="space-y-4">
+          <h3 className="text-2xl font-bold">4. Design Your Architecture</h3>
+          <p className="text-[var(--text-muted)]">Drag nodes from the left sidebar onto the canvas. Connect them by drawing edges between ports. Configure each node's properties in the right panel.</p>
+        </div>
+        <div className="space-y-4">
+          <h3 className="text-2xl font-bold">5. Export & Deploy</h3>
+          <p className="text-[var(--text-muted)]">Click <strong>"Export Code"</strong> to download a ZIP containing your full backend project. Run <code className="px-2 py-0.5 bg-[var(--bg-app)] rounded text-xs">npm install && npm start</code> to launch.</p>
         </div>
         <div className="p-6 rounded-2xl bg-amber-500/5 border border-amber-500/20 mt-8">
           <div className="flex gap-3 items-center mb-2">
             <Shield className="text-amber-500 w-5 h-5" />
-            <span className="font-bold text-amber-500">Prerequisites</span>
+            <span className="font-bold text-amber-500">Prerequisites for Generated Code</span>
           </div>
-          <p className="text-sm text-[var(--text-muted)] italic">Ensure you have Node.js (v16+) and a MongoDB instance (local or Atlas) ready for the generated code.</p>
+          <p className="text-sm text-[var(--text-muted)] italic">Node.js v16+ and a MongoDB instance (local or Atlas). Optional: Redis for caching nodes, SMTP/SendGrid for mail nodes.</p>
         </div>
       </div>
     )
@@ -84,7 +121,7 @@ const sections = [
             </div>
             <div>
               <h4 className="font-bold text-xl mb-1">Field Definition</h4>
-              <p className="text-[var(--text-muted)]">Support for String, Number, Boolean, Date, and ObjectIds. You can mark fields as required, unique, or add default values.</p>
+              <p className="text-[var(--text-muted)]">Support for String, Number, Boolean, Date, and ObjectId types. Mark fields as required, unique, or add default values. Fields are rendered visually on the Entity node card.</p>
             </div>
           </div>
           <div className="flex gap-6">
@@ -93,7 +130,16 @@ const sections = [
             </div>
             <div>
               <h4 className="font-bold text-xl mb-1">Relationships</h4>
-              <p className="text-[var(--text-muted)]">Model 1:1, 1:N, and N:M relationships visually. Architect handles the foreign keys and population logic in controllers.</p>
+              <p className="text-[var(--text-muted)]">Model 1:1, 1:N, and N:M relationships visually by connecting Entity nodes. Architect handles the foreign keys, population logic in controllers, and cascade deletion.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0">
+              <Code2 size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Generated Output</h4>
+              <p className="text-[var(--text-muted)]">Each Entity generates a Mongoose model file with full schema definition, timestamps, validation rules, and index configuration.</p>
             </div>
           </div>
         </div>
@@ -106,7 +152,7 @@ const sections = [
     icon: Globe,
     content: (
       <div className="space-y-8">
-        <p className="text-lg text-[var(--text-muted)]">Connect Entity nodes to API nodes to expose RESTful interfaces.</p>
+        <p className="text-lg text-[var(--text-muted)]">Connect Entity nodes to API nodes to expose RESTful interfaces. Each API node generates a complete route + controller pair.</p>
         <div className="bg-[var(--bg-app)] border border-[var(--border-main)] rounded-2xl p-6 font-mono text-sm">
           <div className="text-emerald-500 mb-2">// Auto-generated Routes</div>
           <div>GET    /api/products</div>
@@ -116,7 +162,7 @@ const sections = [
           <div>DELETE /api/products/:id</div>
         </div>
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {['Controller Auto-Gen', 'Auth Guards', 'Request Validation', 'Error Handling'].map(f => (
+          {['Controller Auto-Gen', 'Auth Guards', 'Request Validation', 'Error Handling', 'Pagination Support', 'Custom Route Prefixes'].map(f => (
             <li key={f} className="flex items-center gap-3 text-sm font-bold">
               <CheckCircle2 size={18} className="text-brand-500" /> {f}
             </li>
@@ -126,54 +172,164 @@ const sections = [
     )
   },
   {
-    id: 'advanced',
-    title: 'Advanced Features',
-    icon: Cpu,
+    id: 'node-types',
+    title: 'All Node Types',
+    icon: Server,
     content: (
-      <div className="space-y-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Shield className="text-rose-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Auth Node</h4>
+      <div className="space-y-8">
+        <p className="text-lg text-[var(--text-muted)]">Architect.io provides 16 specialised node types across 6 architectural layers.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            { name: 'Entity Node', desc: 'Database collections with schema definition', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+            { name: 'API Node', desc: 'REST endpoints with CRUD generation', icon: Globe, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+            { name: 'Auth Node', desc: 'JWT authentication with OTP verification', icon: Shield, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+            { name: 'Database Node', desc: 'MongoDB, PostgreSQL, DynamoDB connections', icon: HardDrive, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+            { name: 'Mail Node', desc: 'Transactional emails via SMTP/SendGrid', icon: Mail, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+            { name: 'Logic Node', desc: 'Custom business logic and service hooks', icon: Cpu, color: 'text-indigo-500', bg: 'bg-indigo-500/10' },
+            { name: 'Middleware Node', desc: 'Rate limiting, CORS, request logging', icon: Code2, color: 'text-violet-500', bg: 'bg-violet-500/10' },
+            { name: 'Storage Node', desc: 'File uploads to AWS S3 or local storage', icon: Cloud, color: 'text-sky-500', bg: 'bg-sky-500/10' },
+            { name: 'Cron Node', desc: 'Scheduled background tasks (cron syntax)', icon: Clock, color: 'text-purple-500', bg: 'bg-purple-500/10' },
+            { name: 'Webhook Node', desc: 'External integrations (Stripe, GitHub)', icon: Webhook, color: 'text-orange-500', bg: 'bg-orange-500/10' },
+            { name: 'Cache Node', desc: 'Redis/Memcached with TTL and eviction', icon: Zap, color: 'text-red-500', bg: 'bg-red-500/10' },
+            { name: 'Load Balancer', desc: 'Round Robin, Sticky Sessions, health checks', icon: Radio, color: 'text-teal-500', bg: 'bg-teal-500/10' },
+            { name: 'CDN Node', desc: 'Edge caching and HTTPS redirect config', icon: Globe, color: 'text-pink-500', bg: 'bg-pink-500/10' },
+            { name: 'Queue Node', desc: 'Kafka, SQS, RabbitMQ message brokers', icon: Layers, color: 'text-lime-500', bg: 'bg-lime-500/10' },
+            { name: 'Counter Service', desc: 'Atomic ID generation with Base62 encoding', icon: BarChart3, color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
+            { name: 'Replica Node', desc: 'Read/write splitting and replication config', icon: Copy, color: 'text-slate-500', bg: 'bg-slate-500/10' },
+          ].map(node => (
+            <div key={node.name} className="flex items-start gap-3 p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
+              <div className={`w-9 h-9 rounded-lg ${node.bg} ${node.color} flex items-center justify-center shrink-0`}>
+                <node.icon size={18} />
+              </div>
+              <div>
+                <h4 className="font-bold text-sm">{node.name}</h4>
+                <p className="text-xs text-[var(--text-muted)]">{node.desc}</p>
+              </div>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Implements JWT-based authentication. Includes sign-up, login, and profile management out of the box with OTP verification support.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Mail className="text-blue-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Mail Node</h4>
+          ))}
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'templates',
+    title: 'Templates',
+    icon: FileText,
+    content: (
+      <div className="space-y-8">
+        <p className="text-lg text-[var(--text-muted)]">Start with a production-proven architecture and customise it to your needs. All templates include pre-configured nodes, edges, and documentation.</p>
+        <div className="space-y-4">
+          {[
+            { name: 'E-Commerce Platform', nodes: 12, desc: 'Auth, product catalog, orders, payments, notification pipeline with CDN, Load Balancer, and Redis caching.' },
+            { name: 'SaaS Multi-Tenant App', nodes: 10, desc: 'Tenant isolation, subscription management, Stripe integration, and per-tenant data segregation.' },
+            { name: 'Real-Time Chat System', nodes: 8, desc: 'WebSocket-powered chat with Redis pub/sub for horizontal scaling, message persistence, and push notifications.' },
+            { name: 'Data Pipeline / ETL', nodes: 9, desc: 'Kafka-based ETL: ingest, transform, validate, and store in both MongoDB and PostgreSQL.' },
+            { name: 'Serverless REST API', nodes: 7, desc: 'AWS Lambda + DynamoDB + S3 with API Gateway authoriser and CloudWatch monitoring.' },
+            { name: 'URL Shortener (System Design)', nodes: 18, desc: 'Counter-based ID generation, multi-level Redis caching, Kafka analytics pipeline, PostgreSQL with read replicas. Includes full study documentation.' },
+          ].map(t => (
+            <div key={t.name} className="p-5 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
+              <div className="flex items-center justify-between mb-1">
+                <h4 className="font-bold">{t.name}</h4>
+                <span className="text-xs text-[var(--text-muted)] font-mono">{t.nodes} nodes</span>
+              </div>
+              <p className="text-sm text-[var(--text-muted)]">{t.desc}</p>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Automated transactional emails. Connect to "after-create" hooks for welcome emails or order confirmations via SendGrid/SMTP.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Cloud className="text-brand-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Storage Node</h4>
+          ))}
+        </div>
+      </div>
+    )
+  },
+  {
+    id: 'code-preview',
+    title: 'Code Preview & Export',
+    icon: Code2,
+    content: (
+      <div className="space-y-8">
+        <p className="text-lg text-[var(--text-muted)]">The code preview panel generates output that reflects your actual architecture — route files, models, consumers, and configs per node.</p>
+        <div className="space-y-6">
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center shrink-0">
+              <Code2 size={24} />
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Handles file uploads. Configure maximum sizes and allowed file types. Generates middleware for AWS S3 or Local storage.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Clock className="text-purple-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Cron Node</h4>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Express.js Code Generation</h4>
+              <p className="text-[var(--text-muted)]">Per-node file generation: routes, controllers, models, and services. Clean MVC architecture with proper separation of concerns.</p>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Schedule background jobs using standard Cron syntax. Perfect for daily cleanups, reports, or automated notifications.</p>
           </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Webhook className="text-emerald-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Webhook Node</h4>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+              <Terminal size={24} />
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Integrate with external services like Stripe or GitHub. Automatically handles incoming events and triggers custom logic.</p>
-          </div>
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Code2 className="text-indigo-500 w-6 h-6" />
-              <h4 className="font-bold text-xl">Middleware Node</h4>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Multi-Format Output</h4>
+              <p className="text-[var(--text-muted)]">Generate Docker Compose files, .env templates, architecture README documentation, and Mermaid diagrams alongside your Express.js code.</p>
             </div>
-            <p className="text-sm text-[var(--text-muted)]">Inject custom middleware like Rate Limiters, CORS, or Request Loggers into any API route group.</p>
           </div>
+        </div>
+
+        <div className="bg-[var(--bg-app)] border border-[var(--border-main)] rounded-2xl p-6 font-mono text-sm">
+          <div className="text-emerald-500 mb-3">// Exported Project Structure</div>
+          <div className="space-y-1 text-[var(--text-muted)]">
+            <div>/generated-backend</div>
+            <div>├── /controllers</div>
+            <div>├── /models</div>
+            <div>├── /routes</div>
+            <div>├── /services</div>
+            <div>├── /middlewares</div>
+            <div>├── app.js</div>
+            <div>├── docker-compose.yml</div>
+            <div>├── package.json</div>
+            <div>├── README.md</div>
+            <div>└── .env.example</div>
+          </div>
+        </div>
+
+        <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {['Live code preview as you build', 'File tree sidebar navigation', 'Copy & Download buttons', 'Syntax-highlighted output'].map(f => (
+            <li key={f} className="flex items-center gap-2 text-sm font-bold">
+              <CheckCircle2 size={16} className="text-brand-500" /> {f}
+            </li>
+          ))}
+        </ul>
+      </div>
+    )
+  },
+  {
+    id: 'demo-mode',
+    title: 'Demo Mode',
+    icon: Play,
+    content: (
+      <div className="space-y-8">
+        <p className="text-lg text-[var(--text-muted)]">Try the full canvas experience without creating an account. Perfect for exploring the platform before committing.</p>
+        <div className="space-y-6">
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+              <Zap size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Instant Access</h4>
+              <p className="text-[var(--text-muted)]">Click "Try Live Demo" on the landing page to open a pre-loaded 8-node MERN architecture. Add nodes, configure properties, and preview code immediately.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0">
+              <Shield size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Gate Actions</h4>
+              <p className="text-[var(--text-muted)]">Save and export actions show a gentle modal encouraging account creation. A 20-minute inactivity nudge reminds you to create an account to preserve your work.</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-5 rounded-2xl bg-indigo-500/5 border border-indigo-500/10">
+          <h4 className="font-bold text-indigo-500 mb-2">What's Available in Demo</h4>
+          <ul className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {['Full node sidebar (16 types)', 'Properties panel', 'Code preview modal', 'README / Docs preview', 'Canvas controls & minimap', 'Add, remove, connect nodes'].map(f => (
+              <li key={f} className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+                <CheckCircle2 size={14} className="text-indigo-500" /> {f}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     )
@@ -191,22 +347,22 @@ const sections = [
             <div className="space-y-4">
               <div className="flex gap-4">
                 <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-black shrink-0">1</div>
-                <p className="text-sm pt-1"><strong>Extract ZIP:</strong> Unpack your generated project folder.</p>
+                <p className="text-sm pt-1"><strong>Export Code:</strong> Click "Export Code" in the builder to download a ZIP containing your full project.</p>
               </div>
               <div className="flex gap-4">
                 <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-black shrink-0">2</div>
-                <p className="text-sm pt-1"><strong>Env Config:</strong> Copy <code>.env.example</code> to <code>.env</code> and set your MongoDB URI.</p>
+                <p className="text-sm pt-1"><strong>Env Config:</strong> Copy <code>.env.example</code> to <code>.env</code> and set your MongoDB URI, JWT secret, and optional Redis/SMTP credentials.</p>
               </div>
               <div className="flex gap-4">
                 <div className="w-8 h-8 rounded-lg bg-brand-500 text-white flex items-center justify-center font-black shrink-0">3</div>
-                <p className="text-sm pt-1"><strong>Install & Start:</strong> Run <code>npm install && npm start</code>.</p>
+                <p className="text-sm pt-1"><strong>Install & Start:</strong> Run <code>npm install && npm start</code>. For Docker users, run <code>docker-compose up</code>.</p>
               </div>
             </div>
           </div>
           <div className="flex items-center justify-between p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
             <div className="flex items-center gap-3">
               <CheckCircle2 className="text-emerald-500" />
-              <span className="font-bold text-emerald-500">Ready for Vercel, Netlify, Railway, or Heroku.</span>
+              <span className="font-bold text-emerald-500">Ready for Vercel, Railway, Render, Heroku, or any VPS.</span>
             </div>
           </div>
         </div>
@@ -233,7 +389,7 @@ export default function Documentation({ showHeader = true }) {
           {showHeader && (
             <div className="px-4 py-4 lg:py-6 mb-2 lg:mb-4 hidden lg:block">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Guidebook</h3>
-              <p className="text-sm font-bold text-brand-500">v1.2.0 - Stable</p>
+              <p className="text-sm font-bold text-brand-500">v1.6.0 - Stable</p>
             </div>
           )}
           

@@ -7,7 +7,7 @@ export const templates = ARCHITECTURE_TEMPLATES.map((t) => ({
   architecture: {
     nodes: t.nodes,
     edges: t.edges,
-    documentation: `# ${t.name}\n\n${t.description}`
+    documentation: t.documentation || `# ${t.name}\n\n${t.description}`
   }
 }));
 

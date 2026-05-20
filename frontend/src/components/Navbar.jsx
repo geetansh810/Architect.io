@@ -87,6 +87,8 @@ export default function Navbar({ user, onLogout }) {
                   <a href="/#about" className="text-sm font-bold hover:text-brand-500 transition-colors">About</a>
                   <NavLink to="/docs" className={({ isActive }) => `text-sm font-bold transition-colors ${isActive ? 'text-brand-500 border-b-2 border-brand-500 pb-0.5' : 'hover:text-brand-500'}`}>Docs</NavLink>
                   <NavLink to="/templates" className={({ isActive }) => `text-sm font-bold transition-colors ${isActive ? 'text-brand-500 border-b-2 border-brand-500 pb-0.5' : 'hover:text-brand-500'}`}>Templates</NavLink>
+                  <NavLink to="/changelog" className={({ isActive }) => `text-sm font-bold transition-colors ${isActive ? 'text-brand-500 border-b-2 border-brand-500 pb-0.5' : 'hover:text-brand-500'}`}>Changelog</NavLink>
+                  <NavLink to="/roadmap" className={({ isActive }) => `text-sm font-bold transition-colors ${isActive ? 'text-brand-500 border-b-2 border-brand-500 pb-0.5' : 'hover:text-brand-500'}`}>Roadmap</NavLink>
                   <NavLink to="/demo" className={({ isActive }) => `text-sm font-bold transition-colors flex items-center gap-1.5 ${isActive ? 'text-amber-500 border-b-2 border-amber-500 pb-0.5' : 'text-amber-500 hover:text-amber-400'}`}>
                     <Sparkles size={14} className="fill-amber-500/20" />
                     Sandbox
@@ -239,6 +241,8 @@ export default function Navbar({ user, onLogout }) {
                   <a href="/#about" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">About</a>
                   <Link to="/docs" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Docs</Link>
                   <Link to="/templates" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Templates</Link>
+                  <Link to="/changelog" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Changelog</Link>
+                  <Link to="/roadmap" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black hover:text-brand-500 transition-colors">Roadmap</Link>
                   <Link to="/demo" onClick={() => setShowMobileMenu(false)} className="text-2xl font-black text-amber-500 flex items-center gap-2">
                     <Sparkles size={20} className="fill-amber-500/20" />
                     Sandbox

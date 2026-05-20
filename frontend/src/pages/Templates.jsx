@@ -89,19 +89,27 @@ export function Templates() {
               )}
 
               {/* Architecture preview representation */}
-              <div className="h-36 bg-gradient-to-br from-indigo-500/10 to-violet-500/5 border-b border-[var(--border-main)] flex items-center justify-center relative">
-                <div className="flex items-center gap-1.5">
-                  {Array.from({ length: Math.min(template.nodeCount, 8) }).map((_, idx) => (
-                    <div
-                      key={idx}
-                      className="w-2.5 h-2.5 rounded-sm bg-brand-500/30 border border-brand-500/50"
-                      style={{ opacity: 0.4 + (idx / 10) }}
-                    />
-                  ))}
-                  {template.nodeCount > 8 && (
-                    <span className="text-xs text-[var(--text-muted)] font-bold">+{template.nodeCount - 8}</span>
-                  )}
-                </div>
+              <div className="h-44 bg-[var(--bg-app)] border-b border-[var(--border-main)] overflow-hidden flex items-center justify-center relative">
+                {template.previewImage ? (
+                  <img
+                    src={template.previewImage}
+                    alt={template.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
+                  />
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    {Array.from({ length: Math.min(template.nodeCount, 8) }).map((_, idx) => (
+                      <div
+                        key={idx}
+                        className="w-2.5 h-2.5 rounded-sm bg-brand-500/30 border border-brand-500/50"
+                        style={{ opacity: 0.4 + (idx / 10) }}
+                      />
+                    ))}
+                    {template.nodeCount > 8 && (
+                      <span className="text-xs text-[var(--text-muted)] font-bold">+{template.nodeCount - 8}</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="p-5">

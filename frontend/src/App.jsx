@@ -6,6 +6,8 @@ import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Docs from './pages/Docs';
+import Changelog from './pages/Changelog';
+import Roadmap from './pages/Roadmap';
 import Dashboard from './pages/Dashboard';
 import Builder from './pages/Builder';
 import AdminDashboard from './pages/AdminDashboard';
@@ -31,6 +33,8 @@ function App() {
           <Route path="/templates" element={<Templates />} />
           <Route path="/architectures" element={<Navigate to="/templates" replace />} />
           <Route path="/docs" element={<Docs />} />
+          <Route path="/changelog" element={<Changelog />} />
+          <Route path="/roadmap" element={<Roadmap />} />
           <Route path="/template/:slug" element={<Builder isTemplate={true} />} />
           <Route path="/login" element={
             !user ? <Login onLogin={login} /> : <Navigate to="/dashboard" />

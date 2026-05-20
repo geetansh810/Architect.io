@@ -532,7 +532,7 @@ export default function Builder({ isTemplate = false }) {
               architecture_json: {
                 nodes: customTemplate.nodes,
                 edges: customTemplate.edges,
-                documentation: `# ${customTemplate.name}\n\n${customTemplate.description}`
+                documentation: customTemplate.documentation || `# ${customTemplate.name}\n\n${customTemplate.description}`
               }
             });
           }

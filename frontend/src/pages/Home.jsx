@@ -541,6 +541,8 @@ export default function Home() {
                 <Link to="/templates" className="block hover:text-brand-500 cursor-pointer transition-colors">Templates</Link>
                 <li className="hover:text-brand-500 cursor-pointer transition-colors">Pricing</li>
                 <Link to="/docs" className="block hover:text-brand-500 cursor-pointer transition-colors">Documentation</Link>
+                <Link to="/changelog" className="block hover:text-brand-500 cursor-pointer transition-colors">Changelog</Link>
+                <Link to="/roadmap" className="block hover:text-brand-500 cursor-pointer transition-colors">Roadmap</Link>
               </ul>
             </div>
 
