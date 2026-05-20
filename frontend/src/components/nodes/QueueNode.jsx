@@ -1,23 +1,35 @@
 import { Handle, Position } from '@xyflow/react';
 import { Layers } from 'lucide-react';
+import ShapeWrapper from './ShapeWrapper';
 
 export default function QueueNode({ data, selected }) {
   return (
-    <div className={`bg-[var(--bg-surface)] border-2 rounded-2xl overflow-hidden min-w-[200px] min-h-[80px] transition-all shadow-xl ${selected ? 'border-orange-500 ring-4 ring-orange-500/10' : 'border-[var(--border-main)]'}`}>
-      <div className="bg-orange-500 px-4 py-3 flex items-center gap-2 border-b border-[var(--border-main)]">
-        <Layers className="w-4 h-4 text-white" />
-        <h4 className="font-black text-white text-sm">Message Queue</h4>
+    <ShapeWrapper nodeType="queueNode" selected={selected}>
+      {/* Header — matches the skewed header polygon (40px high) */}
+      <div className="flex items-center gap-2 h-10 border-b border-orange-600/35 px-1">
+        <Layers className="w-4 h-4 text-white shrink-0" />
+        <span className="font-bold text-white text-xs tracking-wide">Message Queue</span>
       </div>
-      <div className="p-4 bg-[var(--bg-surface)] space-y-1">
-        <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Broker</div>
-        <div className="text-xs font-bold text-orange-600 dark:text-orange-400 truncate">
-          {data.broker || 'Kafka'}
+
+      {/* Body — fits perfectly inside the rest of the shape */}
+      <div className="flex-1 flex flex-col justify-center py-2 px-1">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Broker</span>
+          <span className="text-xs font-bold text-orange-400 truncate max-w-[120px]">
+            {data.broker || 'Kafka'}
+          </span>
         </div>
-        <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mt-2">Topic</div>
-        <div className="text-xs font-mono text-[var(--text-muted)] truncate">{data.topic || 'events'}</div>
+        <div className="flex items-baseline justify-between mt-1.5">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Topic</span>
+          <span className="text-[10px] font-mono text-[var(--text-muted)] truncate max-w-[120px]">
+            {data.topic || 'events'}
+          </span>
+        </div>
       </div>
-      <Handle type="target" position={Position.Left} className="!bg-orange-500 !w-4 !h-4 !border-2 !border-[var(--bg-surface)]" />
-      <Handle type="source" position={Position.Right} className="!bg-orange-500 !w-4 !h-4 !border-2 !border-[var(--bg-surface)]" />
-    </div>
+
+      {/* Position handles exactly at the edge vertices */}
+      <Handle type="target" position={Position.Left} className="!bg-orange-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+      <Handle type="source" position={Position.Right} className="!bg-orange-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+    </ShapeWrapper>
   );
 }

@@ -1,10 +1,11 @@
 // frontend/src/pages/Roadmap.jsx
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ROADMAP_COLUMNS, ROADMAP_ITEMS } from '../data/roadmap';
 import {
   CheckCircle2, Loader2, Calendar, Lightbulb,
-  ChevronUp, ExternalLink, Tag, Zap, Circle
+  ChevronUp, ExternalLink, Tag, Zap, Circle, Rss
 } from 'lucide-react';
 
 // ─── Category badge colors (Light and Dark Mode adapted) ───────────────
@@ -198,15 +199,24 @@ export default function Roadmap() {
                 Our public roadmap. Upvote features you want to see sooner — your votes directly influence priority.
               </p>
             </div>
-            <a
-              href="https://github.com/geetansh810/Architect.io/issues/new"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm cursor-pointer"
-            >
-              <ExternalLink size={12} />
-              Suggest a Feature
-            </a>
+            <div className="flex items-center gap-3">
+              <Link
+                to="/changelog"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm cursor-pointer"
+              >
+                <Rss size={12} className="text-brand-500" />
+                Changelog
+              </Link>
+              <a
+                href="https://github.com/geetansh810/Architect.io/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm cursor-pointer"
+              >
+                <ExternalLink size={12} />
+                Suggest a Feature
+              </a>
+            </div>
           </div>
 
           {/* Category filter */}

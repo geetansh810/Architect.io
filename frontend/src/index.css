@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @import "@xyflow/react/dist/style.css";
+@import "./components/nodes/nodeShapes.css";
 
 @theme {
   --font-sans: "Inter", "Outfit", "Roboto", sans-serif;

@@ -47,6 +47,15 @@ export const ROADMAP_COLUMNS = [
 export const ROADMAP_ITEMS = [
   // ─── Shipped ───────────────────────────────────────────────────────
   {
+    id: 'ship-13',
+    column: 'shipped',
+    title: 'Custom Node Shapes & Connection Alignment',
+    description: 'Custom 3D cylinders, hexagons, skewed parallelograms, and cloud shapes with automatic, unclipped edge connection handles.',
+    category: 'Canvas',
+    votes: 0,
+    version: 'v0.6.5',
+  },
+  {
     id: 'ship-1',
     column: 'shipped',
     title: 'Visual Canvas Builder',

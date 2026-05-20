@@ -62,15 +62,17 @@ The latest release is expanded by default. Click "Show X changes" to expand any 
 
 ---
 
-## Current Status (v0.6.0)
+## Current Status (v0.6.5)
 
 ### Recently Shipped
+- Custom Node Shapes & Edge Connection Alignment (Cylinders, Hexagons, Parallelograms, Clouds)
 - Public Roadmap & Changelog pages
 - URL Shortener system design template (18 nodes)
 - Infrastructure nodes (CDN, Cache, Queue, Load Balancer, Counter Service, Replica)
 - Platform Documentation page
 - Architecture Gallery
 - Demo Mode
+
 
 ### In Progress
 - AI Architecture Assistant

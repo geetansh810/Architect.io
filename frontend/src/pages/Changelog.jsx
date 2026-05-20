@@ -1,8 +1,9 @@
 // frontend/src/pages/Changelog.jsx
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CHANGELOG } from '../data/changelog';
-import { Sparkles, Wrench, ArrowUpCircle, Rss, ChevronDown } from 'lucide-react';
+import { Sparkles, Wrench, ArrowUpCircle, Rss, ChevronDown, Zap } from 'lucide-react';
 
 // ─── Tag Config ───────────────────────────────────────────────────────
 const TAG_STYLES = {
@@ -156,14 +157,24 @@ export default function Changelog() {
                 Every update, fix, and new feature — documented publicly.
               </p>
             </div>
-            {/* RSS link */}
-            <a
-              href="/changelog.xml"
-              className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm"
-            >
-              <Rss size={12} />
-              RSS Feed
-            </a>
+            <div className="flex items-center gap-3">
+              {/* Roadmap link */}
+              <Link
+                to="/roadmap"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm"
+              >
+                <Zap size={12} className="text-brand-500" />
+                Roadmap
+              </Link>
+              {/* RSS link */}
+              <a
+                href="/changelog.xml"
+                className="flex items-center gap-1.5 px-4 py-2 text-xs border border-[var(--border-main)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:border-brand-500 rounded-xl transition-all font-bold bg-[var(--bg-surface)] hover:bg-[var(--bg-app)] shadow-sm"
+              >
+                <Rss size={12} />
+                RSS Feed
+              </a>
+            </div>
           </div>
 
           {/* Filter tabs */}

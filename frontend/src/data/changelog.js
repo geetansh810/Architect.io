@@ -2,6 +2,21 @@
 
 export const CHANGELOG = [
   {
+    version: 'v0.6.5',
+    date: '2026-05-21',
+    tag: 'minor',
+    title: 'Custom Node Shapes & Connection Alignment Overhaul',
+    summary: 'Visual redesign of canvas architecture nodes. Features distinct, high-contrast SVG shapes (cylinders, hexagons, parallelograms, clouds) and mathematically perfect edge handle alignments.',
+    items: [
+      { type: 'new', text: 'Distinct node shapes per type: 3D cylinders for databases, flat-topped hexagons for services, skewed parallelograms for queues, and bezier clouds for third-party integrations.' },
+      { type: 'new', text: 'Dynamic SVG clipping boundaries (clipPath) for headers and split lines, completely eliminating diagonal borders leak.' },
+      { type: 'improved', text: 'Connection handles partitioned dynamically in React, ensuring they render as full circles on outer shapes boundaries and never get cut by overflow: hidden.' },
+      { type: 'improved', text: 'Custom connection dot size, borders, and smooth scale-up hover animations (scale(1.35) + glow).' },
+      { type: 'improved', text: 'Enhanced node interactions: smooth translateY(-2px) lift and dropdown shadows on hover.' },
+      { type: 'fixed', text: 'Removed background card blocks from DbNode and ReplicaNode, keeping the bottom cylinder ellipse fully visible.' },
+    ],
+  },
+  {
     version: 'v0.6.0',
     date: '2025-05-20',
     tag: 'major',

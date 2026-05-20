@@ -1,23 +1,35 @@
 import { Handle, Position } from '@xyflow/react';
 import { Clock } from 'lucide-react';
+import ShapeWrapper from './ShapeWrapper';
 
 export default function CronNode({ data, selected }) {
   return (
-    <div className={`bg-[var(--bg-surface)] border-2 rounded-2xl overflow-hidden min-w-[200px] min-h-[80px] transition-all shadow-xl ${selected ? 'border-purple-500 ring-4 ring-purple-500/10' : 'border-[var(--border-main)]'}`}>
-      <div className="bg-purple-600 px-4 py-3 flex items-center gap-2 border-b border-[var(--border-main)]">
-        <Clock className="w-4 h-4 text-white" />
-        <h4 className="font-black text-white text-sm">Scheduler</h4>
+    <ShapeWrapper nodeType="cronNode" selected={selected}>
+      {/* Header */}
+      <div className="flex items-center gap-2 h-10 border-b border-purple-600/35 px-1">
+        <Clock className="w-4 h-4 text-white shrink-0" />
+        <span className="font-bold text-white text-xs tracking-wide">Scheduler</span>
       </div>
-      <div className="p-4 bg-[var(--bg-surface)]">
-        <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">Schedule</div>
-        <div className="text-xs font-bold text-purple-600 dark:text-purple-400 truncate">
-          {data.schedule || 'Daily at Midnight'}
+
+      {/* Body */}
+      <div className="flex-1 flex flex-col justify-center py-2 px-1">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Schedule</span>
+          <span className="text-xs font-bold text-purple-400 truncate max-w-[110px]">
+            {data.schedule || 'Daily'}
+          </span>
         </div>
         {data.jobName && (
-          <div className="text-[10px] text-[var(--text-muted)] mt-1 truncate">Job: {data.jobName}</div>
+          <div className="flex items-baseline justify-between mt-1.5">
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Job</span>
+            <span className="text-[10px] text-[var(--text-muted)] truncate max-w-[110px]">
+              {data.jobName}
+            </span>
+          </div>
         )}
       </div>
-      <Handle type="target" position={Position.Left} className="!bg-purple-500 !w-4 !h-4 !border-2 !border-[var(--bg-surface)]" />
-    </div>
+
+      <Handle type="target" position={Position.Left} className="!bg-purple-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+    </ShapeWrapper>
   );
 }

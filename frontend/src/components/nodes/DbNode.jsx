@@ -1,20 +1,30 @@
 import { Handle, Position } from '@xyflow/react';
 import { Database } from 'lucide-react';
+import ShapeWrapper from './ShapeWrapper';
 
 export default function DbNode({ data, selected }) {
   return (
-    <div className={`bg-[var(--bg-surface)] border-2 rounded-2xl overflow-hidden min-w-[180px] min-h-[80px] transition-all shadow-xl ${selected ? 'border-slate-500 ring-4 ring-slate-500/10' : 'border-[var(--border-main)]'}`}>
-      <div className="bg-slate-600 px-4 py-3 flex items-center gap-2 border-b border-[var(--border-main)]">
-        <Database className="w-4 h-4 text-white" />
-        <h4 className="font-black text-white text-sm">Database</h4>
+    <ShapeWrapper nodeType="dbNode" selected={selected}>
+      {/* Header — fits into the top cap of the cylinder */}
+      <div className="flex items-center justify-center gap-2 h-10 border-b border-[var(--border-main)] px-3">
+        <Database className="w-4 h-4 text-white shrink-0" />
+        <span className="font-bold text-white text-xs tracking-wide">Database</span>
       </div>
-      <div className="p-4 bg-[var(--bg-surface)]">
-        <div className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] mb-1">Type</div>
-        <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
+
+      {/* Body — cylinder face */}
+      <div className="flex-1 flex flex-col justify-center px-4 py-2">
+        <div className="text-[9px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-0.5">Type</div>
+        <div className="text-xs font-bold text-[var(--text-main)] truncate">
           {data.type || 'MongoDB'}
         </div>
+        {data.dbName && (
+          <div className="text-[10px] text-[var(--text-muted)] truncate mt-1">{data.dbName}</div>
+        )}
       </div>
-      <Handle type="source" position={Position.Bottom} className="!bg-slate-500 !w-4 !h-4 !border-2 !border-[var(--bg-surface)]" />
-    </div>
+
+      {/* Position handles perfectly outside the cylinder caps */}
+      <Handle type="target" position={Position.Top} className="!bg-slate-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+      <Handle type="source" position={Position.Bottom} className="!bg-slate-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+    </ShapeWrapper>
   );
 }

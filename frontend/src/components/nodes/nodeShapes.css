@@ -1,0 +1,40 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * nodeShapes.css
+ * Transition states and custom styling rules for visual nodes.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+.node-shape-root {
+  transition: transform 0.18s cubic-bezier(0.4, 0, 0.2, 1), filter 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform, filter;
+  cursor: grab;
+}
+
+.node-shape-root:active {
+  cursor: grabbing;
+}
+
+.node-shape-root:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.08) drop-shadow(0 12px 28px rgba(0, 0, 0, 0.35));
+}
+
+.node-selected.node-shape-root {
+  transform: translateY(-2px);
+}
+
+/* ── ReactFlow Connectors/Handles Styling & Interactions ─────────────────── */
+.react-flow__handle {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50% !important;
+  border: 2.5px solid var(--bg-surface) !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25) !important;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s ease !important;
+  z-index: 10 !important;
+}
+
+.react-flow__handle:hover {
+  transform: scale(1.35) !important;
+  filter: brightness(1.2) drop-shadow(0 0 4px rgba(255, 255, 255, 0.3)) !important;
+  cursor: crosshair !important;
+}
