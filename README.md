@@ -3,7 +3,7 @@
 
 **Architect.io** is a powerful visual development platform that allows engineers to design, visualise, and generate production-ready backend applications using a sophisticated node-based canvas interface.
 
-> **[Try the Live Demo →](https://architectio.vercel.app/demo)** — No account needed.
+> **[Try the Live Demo →](https://designmysystem.netlify.app/)** — No account needed.
 
 ---
 
