@@ -62,9 +62,16 @@ The latest release is expanded by default. Click "Show X changes" to expand any 
 
 ---
 
-## Current Status (v0.6.5)
+## Current Status (v0.7.0)
 
 ### Recently Shipped
+- Canvas Control Suite & Context Menu (Right-click quick actions and interactive toolbar)
+- Advanced Annotation Nodes (Sticky Notes & lightweight Text Labels)
+- Zone Group Node (Container boundaries for visual swimlanes/clustering)
+- Frontend Application Node Type (Presets for React, Next.js, Vue, mobile apps, etc.)
+- Smart Protocol-Aware Custom Edges (Animated flow dots and protocols REST/gRPC/WebSocket/Redis/etc.)
+- Architecture Intelligence (Automated sidebar calculating Health Score and flagging issues)
+- Command Palette Search & Keyboard Shortcuts (Global shortcuts visual helper modal)
 - Custom Node Shapes & Edge Connection Alignment (Cylinders, Hexagons, Parallelograms, Clouds)
 - Public Roadmap & Changelog pages
 - URL Shortener system design template (18 nodes)

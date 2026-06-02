@@ -3,12 +3,39 @@ import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 
 const ArchitectureContext = createContext();
 
+const COLUMN_MAPPING = {
+  apiNode: 0, cdnNode: 0, loadBalancerNode: 0, frontendNode: 0, mobileNode: 0, browserNode: 0,
+  authNode: 1,
+  logicNode: 2, middlewareNode: 2, counterServiceNode: 2,
+  dbNode: 3, replicaNode: 3, entityNode: 3,
+  storageNode: 3, cacheNode: 3,
+  queueNode: 4, cronNode: 4, mailNode: 4, webhookNode: 4
+};
+
 export function ArchitectureProvider({ children, initialData, onSave }) {
   const [nodes, setNodes] = useState(initialData?.nodes || []);
   const [edges, setEdges] = useState(initialData?.edges || []);
   const [documentation, setDocumentation] = useState(initialData?.documentation || '');
   const [pendingConnection, setPendingConnection] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
+
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const takeSnapshot = useCallback((newNodes, newEdges) => {
+    setHistory(prev => {
+      const nextHistory = prev.slice(0, historyIndex + 1);
+      return [...nextHistory, { nodes: newNodes || nodes, edges: newEdges || edges }];
+    });
+    setHistoryIndex(prev => prev + 1);
+  }, [nodes, edges, historyIndex]);
+
+  useEffect(() => {
+    if (history.length === 0 && (nodes.length > 0 || edges.length > 0)) {
+      setHistory([{ nodes, edges }]);
+      setHistoryIndex(0);
+    }
+  }, [nodes, edges]);
 
   // Initialize from old format if nodes don't exist but entities do (migration)
   useEffect(() => {
@@ -79,19 +106,18 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     
     const deletedIds = new Set(toDelete.map((n) => n.id));
 
-    // Cascade delete edges
-    setEdges((eds) =>
-      eds.filter((e) => !deletedIds.has(e.source) && !deletedIds.has(e.target))
-    );
-    
-    // Remove nodes
-    setNodes((nds) => nds.filter((n) => !deletedIds.has(n.id)));
+    const nextEdges = edges.filter((e) => !deletedIds.has(e.source) && !deletedIds.has(e.target));
+    const nextNodes = nodes.filter((n) => !deletedIds.has(n.id));
+
+    setEdges(nextEdges);
+    setNodes(nextNodes);
+    takeSnapshot(nextNodes, nextEdges);
     
     showToast(`${toDelete.length} node${toDelete.length > 1 ? 's' : ''} deleted`);
-  }, [showToast]);
+  }, [nodes, edges, showToast, takeSnapshot]);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => {
+    (params) => {
       // Find source and target node types
       const sourceNode = nodes.find(n => n.id === params.source);
       const targetNode = nodes.find(n => n.id === params.target);
@@ -112,7 +138,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       } else if (sourceNode?.type === 'entityNode' && targetNode?.type === 'entityNode') {
         // Intercept entity-entity connection
         setPendingConnection(params);
-        return eds;
+        return;
       }
       
       const newEdge = { 
@@ -124,44 +150,44 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         labelBgPadding: [4, 2],
         labelBgBorderRadius: 4
       };
-      return addEdge(newEdge, eds);
-    }),
-    [nodes]
+      
+      const nextEdges = addEdge(newEdge, edges);
+      setEdges(nextEdges);
+      takeSnapshot(nodes, nextEdges);
+    },
+    [nodes, edges, takeSnapshot]
   );
 
-  const confirmConnection = (relationshipData) => {
+  const confirmConnection = useCallback((relationshipData) => {
     if (!pendingConnection) return;
 
-    setEdges((eds) => {
-      const newEdge = { 
-        ...pendingConnection, 
-        animated: true,
-        label: relationshipData.type,
-        data: relationshipData,
-        labelStyle: { fill: '#cbd5e1', fontWeight: 500, fontSize: 10 },
-        labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 },
-        labelBgPadding: [4, 2],
-        labelBgBorderRadius: 4,
-        style: { strokeDasharray: '5 5', stroke: '#10b981' }
-      };
-      return addEdge(newEdge, eds);
-    });
+    const newEdge = { 
+      ...pendingConnection, 
+      animated: true,
+      label: relationshipData.type,
+      data: relationshipData,
+      labelStyle: { fill: '#cbd5e1', fontWeight: 500, fontSize: 10 },
+      labelBgStyle: { fill: '#1e293b', fillOpacity: 0.8 },
+      labelBgPadding: [4, 2],
+      labelBgBorderRadius: 4,
+      style: { strokeDasharray: '5 5', stroke: '#10b981' }
+    };
+    const nextEdges = addEdge(newEdge, edges);
+    setEdges(nextEdges);
     setPendingConnection(null);
-  };
+    takeSnapshot(nodes, nextEdges);
+  }, [nodes, edges, pendingConnection, takeSnapshot]);
 
-  const updateNodeData = (nodeId, dataUpdate) => {
-    setNodes((nds) => {
-      const updatedNodes = nds.map((n) => {
-        if (n.id === nodeId) {
-          return { ...n, data: { ...n.data, ...dataUpdate } };
-        }
-        return n;
-      });
-      return updatedNodes;
+  const updateNodeData = useCallback((nodeId, dataUpdate) => {
+    const nextNodes = nodes.map((n) => {
+      if (n.id === nodeId) {
+        return { ...n, data: { ...n.data, ...dataUpdate } };
+      }
+      return n;
     });
     
     // Also update edge labels if a logic node's hook changed
-    setEdges((eds) => eds.map(e => {
+    const nextEdges = edges.map(e => {
       if (e.target === nodeId) {
         const targetNode = nodes.find(n => n.id === nodeId);
         if (targetNode && targetNode.type === 'logicNode' && dataUpdate.hook) {
@@ -169,10 +195,14 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         }
       }
       return e;
-    }));
-  };
+    });
 
-  const addNode = (type, position) => {
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    takeSnapshot(nextNodes, nextEdges);
+  }, [nodes, edges, takeSnapshot]);
+
+  const addNode = useCallback((type, position) => {
     const id = `${type}-${Date.now()}`;
     const newNode = {
       id,
@@ -212,9 +242,243 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
         ? { replicaCount: 2, strategy: 'Read/Write Split', lagToleranceMs: 100 }
         : {}
     };
-    setNodes((nds) => [...nds, newNode]);
+    const nextNds = [...nodes, newNode];
+    setNodes(nextNds);
+    takeSnapshot(nextNds, edges);
     return id;
-  };
+  }, [nodes, edges, takeSnapshot]);
+
+  const updateEdgeData = useCallback((id, data) => {
+    const nextEdges = edges.map(e => {
+      if (e.id === id) {
+        const newLabel = data.label !== undefined ? data.label : e.label;
+        const newIsAsync = data.isAsync !== undefined ? data.isAsync : e.data?.isAsync;
+        return { ...e, label: newLabel, animated: newIsAsync, data: { ...e.data, ...data } };
+      }
+      return e;
+    });
+    setEdges(nextEdges);
+    takeSnapshot(nodes, nextEdges);
+  }, [nodes, edges, takeSnapshot]);
+
+  const removeElements = useCallback((elementsToRemove) => {
+    const nodeIds = elementsToRemove.filter(el => !el.source).map(n => n.id);
+    const edgeIds = elementsToRemove.filter(el => el.source).map(e => e.id);
+    let nextNodes = nodes;
+    let nextEdges = edges;
+    if (nodeIds.length > 0) {
+      nextNodes = nodes.filter(n => !nodeIds.includes(n.id));
+      nextEdges = edges.filter(e => !nodeIds.includes(e.source) && !nodeIds.includes(e.target));
+    }
+    if (edgeIds.length > 0) {
+      nextEdges = nextEdges.filter(e => !edgeIds.includes(e.id));
+    }
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    takeSnapshot(nextNodes, nextEdges);
+  }, [nodes, edges, takeSnapshot]);
+
+  // History stack implementations
+  const undo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevIndex = historyIndex - 1;
+      setHistoryIndex(prevIndex);
+      const snapshot = history[prevIndex];
+      if (snapshot) {
+        setNodes(snapshot.nodes);
+        setEdges(snapshot.edges);
+      }
+    }
+  }, [history, historyIndex]);
+
+  const redo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const nextIndex = historyIndex + 1;
+      setHistoryIndex(nextIndex);
+      const snapshot = history[nextIndex];
+      if (snapshot) {
+        setNodes(snapshot.nodes);
+        setEdges(snapshot.edges);
+      }
+    }
+  }, [history, historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = history.length > 0 && historyIndex < history.length - 1;
+
+  // Clipboard & Layout implementations
+  const [clipboard, setClipboard] = useState([]);
+
+  const copyNodes = useCallback((nodeIds) => {
+    const selectedNodes = nodes.filter(n => nodeIds.includes(n.id));
+    setClipboard(selectedNodes.map(n => ({
+      type: n.type,
+      data: n.data,
+      position: { ...n.position }
+    })));
+    showToast(`${selectedNodes.length} node(s) copied`);
+  }, [nodes, showToast]);
+
+  const pasteNodes = useCallback(() => {
+    if (clipboard.length === 0) return;
+    const newNodes = clipboard.map(item => {
+      const id = `${item.type}-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+      return {
+        id,
+        type: item.type,
+        data: JSON.parse(JSON.stringify(item.data)),
+        position: { x: item.position.x + 40, y: item.position.y + 40 },
+        selected: true
+      };
+    });
+    const nextNds = nodes.map(n => ({ ...n, selected: false })).concat(newNodes);
+    setNodes(nextNds);
+    takeSnapshot(nextNds, edges);
+    showToast(`${newNodes.length} node(s) pasted`);
+  }, [clipboard, nodes, edges, takeSnapshot, showToast]);
+
+  const duplicateNodes = useCallback((nodeIds) => {
+    if (nodeIds.length === 0) return;
+    const selectedNodes = nodes.filter(n => nodeIds.includes(n.id));
+    const newNodes = selectedNodes.map(n => {
+      const id = `${n.type}-${Date.now()}-${Math.round(Math.random() * 1000)}`;
+      return {
+        id,
+        type: n.type,
+        data: JSON.parse(JSON.stringify(n.data)),
+        position: { x: n.position.x + 40, y: n.position.y + 40 },
+        selected: true
+      };
+    });
+    const nextNds = nodes.map(node => ({ ...node, selected: false })).concat(newNodes);
+    setNodes(nextNds);
+    takeSnapshot(nextNds, edges);
+    showToast(`${newNodes.length} node(s) duplicated`);
+  }, [nodes, edges, takeSnapshot, showToast]);
+
+  const autoLayout = useCallback(() => {
+    if (nodes.length === 0) return;
+    const columnCounts = {};
+    const nextNodes = nodes.map(node => {
+      if (['zoneGroup', 'stickyNote', 'textLabel'].includes(node.type)) {
+        return node;
+      }
+      const col = COLUMN_MAPPING[node.type] !== undefined ? COLUMN_MAPPING[node.type] : 2;
+      const count = columnCounts[col] || 0;
+      columnCounts[col] = count + 1;
+      return {
+        ...node,
+        position: {
+          x: 80 + col * 360,
+          y: 80 + count * 160
+        }
+      };
+    });
+    setNodes(nextNodes);
+    takeSnapshot(nextNodes, edges);
+    showToast('Auto-layout applied');
+  }, [nodes, edges, takeSnapshot, showToast]);
+
+  const alignNodes = useCallback((dir) => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    if (selectedNodes.length < 2) {
+      showToast('Select 2 or more nodes to align', 'warning');
+      return;
+    }
+    const coords = selectedNodes.map(n => ({
+      id: n.id,
+      x: n.position.x,
+      y: n.position.y,
+      w: 250,
+      h: 80
+    }));
+    let targetValue;
+    if (dir === 'left') {
+      targetValue = Math.min(...coords.map(c => c.x));
+    } else if (dir === 'right') {
+      targetValue = Math.max(...coords.map(c => c.x));
+    } else if (dir === 'centerV') {
+      const centers = coords.map(c => c.x + c.w / 2);
+      targetValue = centers.reduce((sum, val) => sum + val, 0) / centers.length;
+    } else if (dir === 'top') {
+      targetValue = Math.min(...coords.map(c => c.y));
+    } else if (dir === 'bottom') {
+      targetValue = Math.max(...coords.map(c => c.y));
+    } else if (dir === 'centerH') {
+      const centers = coords.map(c => c.y + c.h / 2);
+      targetValue = centers.reduce((sum, val) => sum + val, 0) / centers.length;
+    }
+    const nextNodes = nodes.map(node => {
+      if (!node.selected) return node;
+      const updatedPosition = { ...node.position };
+      if (dir === 'left' || dir === 'right') {
+        updatedPosition.x = targetValue;
+      } else if (dir === 'centerV') {
+        updatedPosition.x = targetValue - 250 / 2;
+      } else if (dir === 'top' || dir === 'bottom') {
+        updatedPosition.y = targetValue;
+      } else if (dir === 'centerH') {
+        updatedPosition.y = targetValue - 80 / 2;
+      }
+      return { ...node, position: updatedPosition };
+    });
+    setNodes(nextNodes);
+    takeSnapshot(nextNodes, edges);
+    showToast(`Aligned nodes: ${dir}`);
+  }, [nodes, edges, takeSnapshot, showToast]);
+
+  const distributeNodes = useCallback((axis) => {
+    const selectedNodes = nodes.filter(n => n.selected);
+    if (selectedNodes.length < 3) {
+      showToast('Select 3 or more nodes to distribute', 'warning');
+      return;
+    }
+    const sorted = [...selectedNodes].sort((a, b) => {
+      if (axis === 'horizontal') return a.position.x - b.position.x;
+      return a.position.y - b.position.y;
+    });
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    let nextNodes;
+    if (axis === 'horizontal') {
+      const minX = first.position.x;
+      const maxX = last.position.x;
+      const totalSpan = maxX - minX;
+      const step = totalSpan / (sorted.length - 1);
+      nextNodes = nodes.map(node => {
+        if (!node.selected) return node;
+        const idx = sorted.findIndex(s => s.id === node.id);
+        return {
+          ...node,
+          position: { ...node.position, x: minX + idx * step }
+        };
+      });
+    } else {
+      const minY = first.position.y;
+      const maxY = last.position.y;
+      const totalSpan = maxY - minY;
+      const step = totalSpan / (sorted.length - 1);
+      nextNodes = nodes.map(node => {
+        if (!node.selected) return node;
+        const idx = sorted.findIndex(s => s.id === node.id);
+        return {
+          ...node,
+          position: { ...node.position, y: minY + idx * step }
+        };
+      });
+    }
+    setNodes(nextNodes);
+    takeSnapshot(nextNodes, edges);
+    showToast(`Distributed nodes: ${axis}`);
+  }, [nodes, edges, takeSnapshot, showToast]);
+
+  const selectAll = useCallback(() => {
+    setNodes(nds => nds.map(n => ({ ...n, selected: true })));
+  }, []);
+
+  const onNodeDragStop = useCallback(() => {
+    takeSnapshot(nodes, edges);
+  }, [nodes, edges, takeSnapshot]);
 
   const parseToBackendPayload = () => {
     const entities = [];
@@ -316,17 +580,11 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       onEdgesChange,
       onConnect,
       updateNodeData,
-      addNode,
-      setNodes,
-      parseToBackendPayload,
-      pendingConnection,
-      setPendingConnection,
-      confirmConnection,
-      documentation,
-      setDocumentation,
-      onNodesDelete,
-      toastMessage,
-      showToast
+      addNode, updateEdgeData, removeElements, setNodes, setEdges,
+      parseToBackendPayload, pendingConnection, setPendingConnection, confirmConnection,
+      documentation, setDocumentation, onNodesDelete, toastMessage, showToast,
+      undo, redo, canUndo, canRedo, clipboard, copyNodes, pasteNodes, duplicateNodes,
+      autoLayout, alignNodes, distributeNodes, selectAll, onNodeDragStop
     }}>
       {children}
     </ArchitectureContext.Provider>

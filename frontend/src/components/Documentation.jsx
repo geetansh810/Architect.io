@@ -23,7 +23,9 @@ import {
   BarChart3,
   Copy,
   FileText,
-  Play
+  Play,
+  Box,
+  Type
 } from 'lucide-react';
 
 const sections = [
@@ -50,7 +52,7 @@ const sections = [
           <h4 className="font-bold text-emerald-500 mb-3">Platform Highlights</h4>
           <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
-              '16 specialised node types',
+              '20 specialised node types',
               '6 production-ready templates',
               'System Design study templates',
               'Demo mode — no account needed',
@@ -177,7 +179,7 @@ const sections = [
     icon: Server,
     content: (
       <div className="space-y-8">
-        <p className="text-lg text-[var(--text-muted)]">Architect.io provides 16 specialised node types across 6 architectural layers.</p>
+        <p className="text-lg text-[var(--text-muted)]">Architect.io provides 20 specialised node types across 6 architectural layers.</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
             { name: 'Entity Node', desc: 'Database collections with schema definition', icon: Database, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
@@ -196,6 +198,10 @@ const sections = [
             { name: 'Queue Node', desc: 'Kafka, SQS, RabbitMQ message brokers', icon: Layers, color: 'text-lime-500', bg: 'bg-lime-500/10' },
             { name: 'Counter Service', desc: 'Atomic ID generation with Base62 encoding', icon: BarChart3, color: 'text-fuchsia-500', bg: 'bg-fuchsia-500/10' },
             { name: 'Replica Node', desc: 'Read/write splitting and replication config', icon: Copy, color: 'text-slate-500', bg: 'bg-slate-500/10' },
+            { name: 'Frontend Node', desc: 'Visual presets for client Web and Mobile apps', icon: Globe, color: 'text-cyan-500', bg: 'bg-cyan-500/10' },
+            { name: 'Zone Group Node', desc: 'Visual boundaries to group and cluster components', icon: Box, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+            { name: 'Sticky Note Node', desc: 'Post-it style notes for canvas annotations', icon: FileText, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+            { name: 'Text Label Node', desc: 'Lightweight frameless canvas text annotations', icon: Type, color: 'text-slate-500', bg: 'bg-slate-500/10' },
           ].map(node => (
             <div key={node.name} className="flex items-start gap-3 p-4 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
               <div className={`w-9 h-9 rounded-lg ${node.bg} ${node.color} flex items-center justify-center shrink-0`}>
@@ -368,6 +374,95 @@ const sections = [
         </div>
       </div>
     )
+  },
+  {
+    id: 'canvas-tools',
+    title: 'Canvas Tools & Shortcuts',
+    icon: Zap,
+    content: (
+      <div className="space-y-8">
+        <p className="text-lg text-[var(--text-muted)]">Architect.io features a complete set of canvas control tools and keyboard shortcuts to make canvas editing efficient and fluid.</p>
+        <div className="space-y-6">
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center shrink-0">
+              <Zap size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Interactive Canvas Toolbar</h4>
+              <p className="text-[var(--text-muted)]">Located at the bottom of the canvas, the toolbar lets you cycle grid layouts (Dots, Lines, Cross, None), toggle Snap-to-Grid, and auto-layout nodes. It also includes multi-node alignment tools (align top, bottom, center, left, right) and distribution spacing tools.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0">
+              <Terminal size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Desktop Context Menu</h4>
+              <p className="text-[var(--text-muted)]">Right-click anywhere on the canvas to open the Context Menu. From here, you can instantly perform viewport adjustments, paste clipboard components, add Zone Groups or annotations (Sticky Notes, Text Labels), and duplicate or delete selected nodes.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+              <Book size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Command Palette Search</h4>
+              <p className="text-[var(--text-muted)]">Press <code className="px-2 py-0.5 bg-[var(--bg-app)] rounded text-xs">Ctrl + F</code> or <code className="px-2 py-0.5 bg-[var(--bg-app)] rounded text-xs">Cmd + F</code> to bring up the Search Palette. Type any part of a node's name, type, or description and select it to automatically pan and zoom directly to it on the canvas.</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-6 rounded-[2rem] bg-[var(--bg-sidebar)] border border-[var(--border-main)]">
+          <h4 className="font-black mb-4 uppercase text-xs tracking-widest text-[var(--text-muted)]">Keyboard Shortcuts Cheat Sheet</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-semibold">
+            <div className="space-y-2">
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Undo Action</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + Z</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Redo Action</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + Y</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Copy Node Selection</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + C</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Paste Clipboard Nodes</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + V</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Duplicate Node Selection</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + D</kbd>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Search / Command Palette</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + F</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Auto-Layout Diagram</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + L</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Fit View to Screen</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + 0</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Presentation Mode</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">F5 / Ctrl+Shift+P</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Toggle Shortcuts Panel</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">?</kbd>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 ];
 
@@ -389,7 +484,7 @@ export default function Documentation({ showHeader = true }) {
           {showHeader && (
             <div className="px-4 py-4 lg:py-6 mb-2 lg:mb-4 hidden lg:block">
               <h3 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-muted)] mb-2">Guidebook</h3>
-              <p className="text-sm font-bold text-brand-500">v1.6.0 - Stable</p>
+              <p className="text-sm font-bold text-brand-500">v1.7.0 - Stable</p>
             </div>
           )}
           

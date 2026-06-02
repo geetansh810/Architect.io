@@ -92,3 +92,46 @@ Architect.io supports complex backend patterns and production infrastructure thr
 - Hooks: `before-create`, `after-create`, `before-update`, `after-delete`.
 - Generates service files with clean separation from controllers.
 - Perfect for: notification workers, data transformers, validators.
+
+## Frontend App Node
+
+- Model client-side web, mobile, and desktop applications visually.
+- Framework presets supported: **React**, **Next.js**, **Vue**, **Angular**, **React Native**, and **Expo**.
+- Displays technological badges and allows visual description annotations.
+- Perfect for mapping entry points and outlining which user interfaces request backend API endpoints.
+
+## Zone Group Node
+
+- Visual boundary containers acting as group zones or swimlanes on the canvas.
+- Dynamically assigns container header icons based on titles (e.g., Client, Edge, Service/Microservice, Data/Database, External/Cloud).
+- Visual color palette choices: blue, green, purple, orange, red, and slate.
+- Used to logically group, isolate, or categorize multi-tier services or multi-node databases together.
+
+## Sticky Note Node
+
+- Desktop post-it style visual blocks designed for notes, annotations, and system descriptions.
+- Supports five high-contrast color themes: yellow, pink, blue, green, and purple.
+- Double-click inline text editing.
+- Can optionally connect to regular nodes to document architectural details.
+
+## Text Label Node
+
+- Frameless, lightweight text blocks for canvas annotation.
+- Supports custom font sizing, bold weight formatting, and custom hex text colors.
+- Perfect for canvas section headings or highlighting canvas flow titles.
+
+## Smart Custom Edges
+
+- Dynamic connections with protocol-specific color styling and custom protocol badges.
+- Preconfigured protocols: **REST**, **gRPC**, **WebSocket**, **pub/sub**, **DB**, **Redis**, **FK** (Foreign Key), **HTTP**, and **Internal**.
+- Real-time animated flow dots travel along the edge path to indicate active routing.
+- Asynchronous lines are rendered as dashed edges.
+- Interactive hover transitions scale connection handles and glow edge paths.
+
+## Architecture Intelligence Analyzer
+
+- Real-time rule-based static analyzer sidebar calculating an architectural Health Score out of 100.
+- Checks canvas configurations and generates reports on:
+  - **Security**: Warns if API routes are not auth-protected or if no auth guard node exists in the architecture.
+  - **Warnings**: Flags bottlenecks such as executing long transactional SMTP mail/webhook requests synchronously rather than utilizing async message queues.
+  - **Insights & Optimizations**: Suggests performance improvements such as adding Redis cache before database nodes or replicas to handle reads.

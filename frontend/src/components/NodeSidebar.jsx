@@ -1,257 +1,361 @@
-import { Database, Shield, Mail, Cpu, Globe, Info, X, Filter, Upload, Clock, Webhook, PlayCircle, Zap, SplitSquareVertical, Globe2, Layers, Hash, Copy } from 'lucide-react';
-import { useState } from 'react';
-import { startBuilderTour } from '../utils/tour';
+import { useState, useCallback, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Search, ChevronDown, ChevronRight, Pin, Plus,
+  Star, Clock, X
+} from 'lucide-react';
+import { NODE_SHAPE_CONFIG } from './nodes/nodeShapeConfig';
+import TechIcon from './nodes/TechIcons';
 
-const nodeDocs = {
-  entityNode: {
-    title: 'Database Entity',
-    desc: 'Defines a Mongoose schema. Use this to structure your data models.',
-    usage: 'Drag to canvas, add fields like name, type, and required status.',
-    variables: 'name (String), fields (Array)'
+// ── Node Category Definitions ─────────────────────────────────────────────────
+const CATEGORIES = [
+  {
+    name: 'Core',
+    color: '#10b981',
+    nodes: ['entityNode', 'apiNode'],
+    description: 'Data models and API routes',
   },
-  apiNode: {
-    title: 'API Endpoint',
-    desc: 'Exposes CRUD operations for a connected entity.',
-    usage: 'Connect an Entity node to this node to generate GET, POST, PUT, DELETE routes.',
-    variables: 'route (String), authEnabled (Boolean)'
+  {
+    name: 'Architecture',
+    color: '#6366f1',
+    nodes: ['authNode', 'dbNode', 'middlewareNode', 'logicNode'],
+    description: 'Auth, database, and processing',
   },
-  logicNode: {
-    title: 'Business Logic',
-    desc: 'Custom code execution triggered by lifecycle hooks.',
-    usage: 'Connect an API node to this node. Choose a hook like "after-create".',
-    variables: 'name (String), hook (Enum)'
+  {
+    name: 'Infrastructure',
+    color: '#0ea5e9',
+    nodes: ['cacheNode', 'loadBalancerNode', 'cdnNode', 'queueNode', 'replicaNode', 'counterServiceNode'],
+    description: 'Caching, load balancing, messaging',
   },
-  authNode: {
-    title: 'Auth Config',
-    desc: 'Global authentication settings for your backend.',
-    usage: 'Configure JWT secret, expiry, and methods.',
-    variables: 'method (String), secret (String), expiry (String)'
+  {
+    name: 'Operations',
+    color: '#a855f7',
+    nodes: ['cronNode'],
+    description: 'Scheduled jobs and automation',
   },
-  dbNode: {
-    title: 'Database Config',
-    desc: 'Connection settings for your MongoDB/PostgreSQL instance.',
-    usage: 'Set the connection URI and database name.',
-    variables: 'type (String), uri (String), dbName (String)'
+  {
+    name: 'Integrations',
+    color: '#f43f5e',
+    nodes: ['mailNode', 'storageNode', 'webhookNode'],
+    description: 'External services and webhooks',
   },
-  mailNode: {
-    title: 'Mailer Service',
-    desc: 'Configure email providers like SendGrid or SMTP.',
-    usage: 'Set API keys and sender identities.',
-    variables: 'provider (String), fromEmail (String)'
+  {
+    name: 'Frontend',
+    color: '#06b6d4',
+    nodes: ['frontendNode', 'mobileNode', 'browserNode'],
+    description: 'Client applications',
   },
-  middlewareNode: {
-    title: 'Middleware',
-    desc: 'Add reusable logic to your request-response cycle.',
-    usage: 'Place between Entity and API nodes to add logging, rate limiting, or validation.',
-    variables: 'middlewareType (Enum), config (Object)'
+  {
+    name: 'Annotations',
+    color: '#64748b',
+    nodes: ['zoneGroup', 'stickyNote', 'textLabel'],
+    description: 'Labels, notes, and zones',
   },
-  storageNode: {
-    title: 'File Storage',
-    desc: 'Handle file uploads and cloud storage integration.',
-    usage: 'Configure max file sizes and storage providers like AWS S3 or Cloudinary.',
-    variables: 'provider (String), maxSizeMB (Number)'
-  },
-  cronNode: {
-    title: 'Scheduler',
-    desc: 'Execute tasks on a recurring schedule.',
-    usage: 'Define visual schedules (Daily, Hourly) or custom cron expressions.',
-    variables: 'jobName (String), schedule (String)'
-  },
-  webhookNode: {
-    title: 'Webhook',
-    desc: 'Send or receive automated event-driven HTTP requests.',
-    usage: 'Integrate with third-party services like Stripe, GitHub, or Slack.',
-    variables: 'direction (Enum), provider (String)'
-  },
-  cacheNode: {
-    title: 'Cache Layer',
-    desc: 'In-memory data store for sub-millisecond reads. Essential for the fast redirect path (< 100ms).',
-    usage: 'Place between API Route and Database nodes. The hot read path checks cache first, falls back to DB.',
-    variables: 'provider (String: Redis/Memcached), evictionPolicy (LRU/LFU), ttl (seconds), strategy (Cache-Aside/Write-Through)'
-  },
-  loadBalancerNode: {
-    title: 'Load Balancer',
-    desc: 'Distributes incoming traffic across multiple application server instances for horizontal scaling.',
-    usage: 'Place at the entry point of your architecture, before your API nodes.',
-    variables: 'algorithm (Round Robin/Least Connections/IP Hash), healthPath (String), intervalSec (Number)'
-  },
-  cdnNode: {
-    title: 'CDN / Edge',
-    desc: 'Content Delivery Network that caches responses at edge locations globally for minimum latency.',
-    usage: 'Place at the ingress. For URL shorteners, use 302 redirects so redirects are not cached by browsers.',
-    variables: 'provider (Cloudflare/CloudFront/Fastly), redirectType (301/302), regions (String)'
-  },
-  queueNode: {
-    title: 'Message Queue',
-    desc: 'Async message broker for decoupling write-heavy operations like click analytics from the hot redirect path.',
-    usage: 'Connect from API node (producer) to Logic Hook (consumer). Use for write-behind analytics.',
-    variables: 'broker (Kafka/SQS/RabbitMQ), topic (String), consumerGroup (String), partitions (Number)'
-  },
-  counterServiceNode: {
-    title: 'ID Generator',
-    desc: 'Distributed counter service for generating unique, sequential short codes via atomic Redis INCR + Base62 encoding.',
-    usage: 'Connect to Logic Hook nodes that create short URLs. The counter atomically allocates batches of IDs.',
-    variables: 'strategy (Counter+Base62/Hash/Snowflake), encoding (Base62/Base58), batchSize (Number), codeLength (Number)'
-  },
-  replicaNode: {
-    title: 'Read Replica',
-    desc: 'Read-only database replica to scale read throughput. Redirect path reads from replicas; writes go to primary.',
-    usage: 'Connect from your primary DB node. Set the split strategy to route reads vs writes appropriately.',
-    variables: 'replicaCount (Number), strategy (Read/Write Split), lagToleranceMs (Number)'
-  }
-};
+];
 
-export default function NodeSidebar() {
-  const [selectedDoc, setSelectedDoc] = useState(null);
-  const [popoverY, setPopoverY] = useState(0);
+// ── Single Node Card ──────────────────────────────────────────────────────────
+function NodeCard({ type, onAddNode, onPinToggle, isPinned, compact = false }) {
+  const config = NODE_SHAPE_CONFIG[type] || {};
+  const label = config.label || type;
+  const icon  = config.techIcon;
+  const glow  = config.glowColor || '100,116,139';
+  const badge = config.compactLabel || label.slice(0, 4);
 
-  const onDragStart = (event, nodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
+  const onDragStart = (e) => {
+    e.dataTransfer.setData('application/reactflow', type);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleNodeClick = (type, event) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    setPopoverY(rect.top);
-    setSelectedDoc(nodeDocs[type]);
-  };
-
-  const NodeItem = ({ type, icon: Icon, label, color }) => (
-    <div
-      className={`flex items-center justify-between p-3 rounded-xl border border-[var(--border-main)] bg-[var(--bg-surface)] cursor-grab hover:border-brand-500 hover:shadow-md transition-all group active:cursor-grabbing`}
-      onDragStart={(event) => onDragStart(event, type)}
-      draggable
-    >
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${color} text-white`}>
-          <Icon className="w-4 h-4" />
-        </div>
-        <span className="text-sm font-bold">{label}</span>
-      </div>
-      <button 
-        onClick={(e) => handleNodeClick(type, e)}
-        className="p-1.5 text-[var(--text-muted)] hover:text-brand-500 hover:bg-brand-500/10 rounded-lg transition-colors"
-        title="Node Info"
+  if (compact) {
+    return (
+      <motion.div
+        draggable
+        onDragStart={onDragStart}
+        whileHover={{ scale: 1.08 }}
+        whileTap={{ scale: 0.95 }}
+        title={label}
+        className="flex flex-col items-center gap-1 p-2 rounded-xl cursor-grab
+          bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-transparent
+          hover:border-[var(--border-main)] transition-all group"
+        style={{ '--glow': `rgba(${glow},0.2)` }}
       >
-        <Info className="w-3.5 h-3.5" />
-      </button>
-    </div>
-  );
+        {icon
+          ? <TechIcon name={icon} size={20} />
+          : <div className="w-5 h-5 rounded-md" style={{ background: `rgba(${glow},0.3)` }} />
+        }
+        <span className="text-[8px] font-black text-[var(--text-muted)] text-center leading-tight max-w-[40px] truncate">
+          {badge}
+        </span>
+      </motion.div>
+    );
+  }
 
   return (
-    <aside className="h-full w-72 border-r border-[var(--border-main)] bg-[var(--bg-sidebar)] p-6 flex flex-col gap-8 shrink-0 relative overflow-y-auto">
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Core Entities</h3>
-        <div className="space-y-3" id="tour-core-nodes">
-          <NodeItem type="entityNode" icon={Database} label="Data Model" color="bg-emerald-500" />
-          <NodeItem type="apiNode" icon={Globe} label="API Route" color="bg-blue-500" />
-        </div>
+    <motion.div
+      draggable
+      onDragStart={onDragStart}
+      whileHover={{ x: 3, boxShadow: `0 4px 20px rgba(${glow},0.2)` }}
+      whileTap={{ scale: 0.97 }}
+      className="flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-grab
+        bg-[var(--bg-app)] hover:bg-[var(--bg-surface)] border border-transparent
+        hover:border-[var(--border-main)] transition-all group relative"
+    >
+      {/* Tech icon */}
+      <div
+        className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+        style={{ background: `rgba(${glow},0.15)` }}
+      >
+        {icon
+          ? <TechIcon name={icon} size={18} />
+          : <div className="w-4 h-4 rounded-sm" style={{ background: `rgba(${glow},0.5)` }} />
+        }
       </div>
 
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Architecture</h3>
-        <div className="space-y-3" id="tour-arch-nodes">
-          <NodeItem type="authNode" icon={Shield} label="Auth Guard" color="bg-amber-500" />
-          <NodeItem type="dbNode" icon={Database} label="Database" color="bg-slate-700" />
-          <NodeItem type="mailNode" icon={Mail} label="Mailer" color="bg-rose-500" />
-          <NodeItem type="middlewareNode" icon={Filter} label="Middleware" color="bg-cyan-500" />
-        </div>
+      {/* Label */}
+      <div className="flex-1 min-w-0">
+        <p className="text-xs font-bold text-[var(--text-main)] truncate leading-tight">{label}</p>
+        {config.compactLabel && (
+          <p className="text-[9px] text-[var(--text-muted)] font-medium capitalize">{config.category || ''}</p>
+        )}
       </div>
 
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Operations</h3>
-        <div className="space-y-3">
-          <NodeItem type="logicNode" icon={Cpu} label="Logic Hook" color="bg-indigo-500" />
-          <NodeItem type="cronNode" icon={Clock} label="Scheduler" color="bg-purple-500" />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Integrations</h3>
-        <div className="space-y-3">
-          <NodeItem type="storageNode" icon={Upload} label="File Upload" color="bg-orange-500" />
-          <NodeItem type="webhookNode" icon={Webhook} label="Webhook" color="bg-fuchsia-500" />
-        </div>
-      </div>
-
-      <div>
-        <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)] mb-4">Infrastructure</h3>
-        <div className="space-y-3">
-          <NodeItem type="cacheNode" icon={Zap} label="Cache Layer" color="bg-red-500" />
-          <NodeItem type="loadBalancerNode" icon={SplitSquareVertical} label="Load Balancer" color="bg-sky-600" />
-          <NodeItem type="cdnNode" icon={Globe2} label="CDN / Edge" color="bg-amber-500" />
-          <NodeItem type="queueNode" icon={Layers} label="Message Queue" color="bg-orange-500" />
-          <NodeItem type="counterServiceNode" icon={Hash} label="ID Generator" color="bg-violet-600" />
-          <NodeItem type="replicaNode" icon={Copy} label="Read Replica" color="bg-slate-500" />
-        </div>
-      </div>
-
-      <div className="mt-auto space-y-3">
+      {/* Hover actions */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
-          onClick={() => startBuilderTour(true)}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-brand-500/10 text-brand-500 border border-brand-500/20 font-bold hover:bg-brand-500/20 transition-all"
+          onMouseDown={e => { e.stopPropagation(); onPinToggle?.(type); }}
+          className={`p-1 rounded-lg transition-all ${isPinned ? 'text-amber-400 bg-amber-400/10' : 'text-[var(--text-muted)] hover:text-amber-400'}`}
+          title={isPinned ? 'Unpin' : 'Pin to favorites'}
         >
-          <PlayCircle size={18} />
-          Take a Tour
+          <Pin size={11} />
         </button>
-        <div className="p-4 rounded-2xl bg-brand-500/5 border border-brand-500/10">
-          <p className="text-[10px] font-bold text-brand-500 uppercase tracking-wider mb-1">Pro Tip</p>
-          <p className="text-xs text-[var(--text-muted)] leading-tight">
-            Drag nodes to the canvas to start architecting. Click the info icon for documentation.
-          </p>
+        <button
+          onMouseDown={e => { e.stopPropagation(); onAddNode?.(type); }}
+          className="p-1 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-all"
+          title={`Add ${label} to canvas`}
+        >
+          <Plus size={11} />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+// ── Category Section ──────────────────────────────────────────────────────────
+function CategorySection({ cat, onAddNode, onPinToggle, pinnedTypes, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+
+  return (
+    <div>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 hover:bg-[var(--bg-app)] rounded-lg transition-colors group"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full shrink-0" style={{ background: cat.color }} />
+          <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)] group-hover:text-[var(--text-main)]">
+            {cat.name}
+          </span>
+          <span className="text-[8px] font-bold text-[var(--text-muted)] bg-[var(--bg-app)] px-1.5 py-0.5 rounded-full">
+            {cat.nodes.length}
+          </span>
+        </div>
+        <motion.div animate={{ rotate: open ? 0 : -90 }} transition={{ duration: 0.15 }}>
+          <ChevronDown size={12} className="text-[var(--text-muted)]" />
+        </motion.div>
+      </button>
+
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="pl-2 pr-1 pb-1 space-y-0.5">
+              {cat.nodes.map(type => (
+                <NodeCard
+                  key={type}
+                  type={type}
+                  onAddNode={onAddNode}
+                  onPinToggle={onPinToggle}
+                  isPinned={pinnedTypes.has(type)}
+                />
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ── Main Sidebar ──────────────────────────────────────────────────────────────
+export default function NodeSidebar({ onAddNode }) {
+  const [search, setSearch] = useState('');
+  const [pinnedTypes, setPinnedTypes] = useState(new Set(['entityNode', 'apiNode', 'dbNode']));
+  const [recentTypes, setRecentTypes] = useState(['entityNode', 'apiNode']);
+  const searchRef = useRef(null);
+
+  const handlePinToggle = useCallback((type) => {
+    setPinnedTypes(prev => {
+      const next = new Set(prev);
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
+      return next;
+    });
+  }, []);
+
+  const handleAddNode = useCallback((type) => {
+    onAddNode?.(type);
+    setRecentTypes(prev => {
+      const next = [type, ...prev.filter(t => t !== type)].slice(0, 5);
+      return next;
+    });
+  }, [onAddNode]);
+
+  const handleDragStart = useCallback((type) => {
+    setRecentTypes(prev => {
+      const next = [type, ...prev.filter(t => t !== type)].slice(0, 5);
+      return next;
+    });
+  }, []);
+
+  // Search results
+  const allTypes = Object.keys(NODE_SHAPE_CONFIG);
+  const searchResults = search.length >= 1
+    ? allTypes.filter(t => {
+        const cfg = NODE_SHAPE_CONFIG[t];
+        return (
+          t.toLowerCase().includes(search.toLowerCase()) ||
+          cfg.label?.toLowerCase().includes(search.toLowerCase()) ||
+          cfg.category?.toLowerCase().includes(search.toLowerCase())
+        );
+      })
+    : [];
+
+  return (
+    <div className="w-72 h-full flex flex-col bg-[var(--bg-sidebar)] overflow-hidden">
+      {/* Header */}
+      <div className="px-4 pt-5 pb-3 border-b border-[var(--border-main)] shrink-0">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-black uppercase tracking-widest text-[var(--text-muted)]">Components</h3>
+          <span className="text-[9px] text-[var(--text-muted)] bg-[var(--bg-app)] px-2 py-1 rounded-full font-bold">
+            {allTypes.length} nodes
+          </span>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)]" />
+          <input
+            ref={searchRef}
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Search nodes… (Ctrl+F)"
+            className="w-full pl-8 pr-8 py-2 text-xs bg-[var(--bg-app)] border border-[var(--border-main)] rounded-xl
+              text-[var(--text-main)] placeholder:text-[var(--text-muted)] outline-none focus:border-brand-500
+              transition-colors font-medium"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-main)]">
+              <X size={12} />
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Documentation Popover — fixed near clicked node */}
-      {selectedDoc && (
-        <div
-          className="fixed z-50 w-72 bg-[var(--bg-sidebar)] border border-[var(--border-main)] rounded-2xl shadow-2xl flex flex-col"
-          style={{
-            left: 292,
-            top: Math.max(16, Math.min(popoverY, window.innerHeight - 48)),
-            maxHeight: `calc(100vh - ${Math.max(16, Math.min(popoverY, window.innerHeight - 48))}px - 16px)`,
-          }}
-        >
-          {/* Fixed header */}
-          <div className="flex items-center justify-between p-4 border-b border-[var(--border-main)] shrink-0">
-            <h4 className="text-base font-black text-[var(--text-main)]">{selectedDoc.title}</h4>
-            <button
-              onClick={() => setSelectedDoc(null)}
-              className="p-1.5 hover:bg-[var(--bg-app)] rounded-xl transition-colors text-[var(--text-muted)] hover:text-red-500"
+      {/* Scrollable content */}
+      <div className="flex-1 overflow-y-auto py-3 space-y-1 no-scrollbar" id="tour-node-palette">
+
+        {/* Search Results */}
+        <AnimatePresence>
+          {search.length >= 1 && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="px-3 space-y-0.5"
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+              <p className="text-[9px] font-black uppercase tracking-widest text-[var(--text-muted)] pb-1">
+                {searchResults.length} result{searchResults.length !== 1 ? 's' : ''} for "{search}"
+              </p>
+              {searchResults.length === 0 && (
+                <p className="text-xs text-[var(--text-muted)] text-center py-4">No nodes match</p>
+              )}
+              {searchResults.map(type => (
+                <NodeCard
+                  key={type}
+                  type={type}
+                  onAddNode={handleAddNode}
+                  onPinToggle={handlePinToggle}
+                  isPinned={pinnedTypes.has(type)}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-          {/* Scrollable content */}
-          <div className="overflow-y-auto flex-1 p-4 flex flex-col gap-4">
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-brand-500">Description</label>
-              <p className="text-sm mt-1 leading-relaxed text-[var(--text-main)]">{selectedDoc.desc}</p>
+        {/* Non-search view */}
+        {!search && (
+          <>
+            {/* Favorites */}
+            {pinnedTypes.size > 0 && (
+              <div className="px-1">
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <Star size={11} className="text-amber-400" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Favorites</span>
+                </div>
+                <div className="grid grid-cols-4 gap-1 px-2 pb-2">
+                  {[...pinnedTypes].map(type => (
+                    <NodeCard key={type} type={type} compact onAddNode={handleAddNode} onPinToggle={handlePinToggle} isPinned={true} />
+                  ))}
+                </div>
+                <div className="h-px bg-[var(--border-main)] mx-3 mb-1" />
+              </div>
+            )}
+
+            {/* Recently Used */}
+            {recentTypes.length > 0 && (
+              <div className="px-1">
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <Clock size={11} className="text-[var(--text-muted)]" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Recently Used</span>
+                </div>
+                <div className="flex gap-1 px-2 pb-2 overflow-x-auto no-scrollbar">
+                  {recentTypes.map(type => (
+                    <NodeCard key={type} type={type} compact onAddNode={handleAddNode} onPinToggle={handlePinToggle} isPinned={pinnedTypes.has(type)} />
+                  ))}
+                </div>
+                <div className="h-px bg-[var(--border-main)] mx-3 mb-1" />
+              </div>
+            )}
+
+            {/* All Categories */}
+            <div className="px-1 space-y-0.5">
+              {CATEGORIES.map((cat, i) => (
+                <CategorySection
+                  key={cat.name}
+                  cat={cat}
+                  onAddNode={handleAddNode}
+                  onPinToggle={handlePinToggle}
+                  pinnedTypes={pinnedTypes}
+                  defaultOpen={i < 2}
+                />
+              ))}
             </div>
+          </>
+        )}
+      </div>
 
-            <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-brand-500">How to use</label>
-              <p className="text-sm mt-1 leading-relaxed text-[var(--text-main)]">{selectedDoc.usage}</p>
-            </div>
-
-            <div className="p-3 rounded-xl bg-[var(--bg-app)] border border-[var(--border-main)]">
-              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Data Variables</label>
-              <p className="text-xs font-mono mt-1 text-brand-600 dark:text-brand-400 break-words">{selectedDoc.variables}</p>
-            </div>
-          </div>
-
-          {/* Fixed footer */}
-          <div className="p-4 border-t border-[var(--border-main)] shrink-0">
-            <button
-              onClick={() => setSelectedDoc(null)}
-              className="w-full py-2.5 bg-brand-500/10 hover:bg-brand-500/20 text-brand-500 rounded-xl font-bold transition-colors text-sm"
-            >
-              Got it
-            </button>
-          </div>
-        </div>
-      )}
-    </aside>
+      {/* Footer drag hint */}
+      <div className="px-4 py-3 border-t border-[var(--border-main)] shrink-0">
+        <p className="text-[9px] text-[var(--text-muted)] text-center font-medium">
+          Drag nodes to canvas · Click + to add at center
+        </p>
+      </div>
+    </div>
   );
 }

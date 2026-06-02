@@ -1,26 +1,21 @@
 import { Handle, Position } from '@xyflow/react';
-import { SplitSquareVertical } from 'lucide-react';
 import ShapeWrapper from './ShapeWrapper';
+import TechIcon from './TechIcons';
 
 export default function LoadBalancerNode({ data, selected }) {
   return (
-    <ShapeWrapper nodeType="loadBalancerNode" selected={selected}>
-      {/* Icon placed nicely in the center-top */}
-      <div className="p-2 rounded-full bg-sky-500/10 border border-sky-500/25 mb-1.5 shadow-sm">
-        <SplitSquareVertical className="w-5 h-5 text-sky-400" />
-      </div>
+    <ShapeWrapper nodeType="loadBalancerNode" selected={selected} data={data}>
+      <TechIcon name="nginx" size={28} className="mx-auto mt-4 mb-1" />
+      <div className="font-black text-white text-xs text-center">Load Balancer</div>
+      <div className="text-[9px] text-sky-300 font-bold text-center mt-0.5">{data.algorithm || 'Round Robin'}</div>
+      {data.sslTermination && (
+        <div className="text-[8px] text-green-400 font-bold text-center">🔒 SSL</div>
+      )}
 
-      {/* Label and descriptive text */}
-      <h4 className="font-black text-[var(--text-main)] text-xs text-center tracking-wide">
-        Load Balancer
-      </h4>
-      <p className="text-[9px] font-semibold text-sky-400 mt-1 max-w-[110px] text-center leading-snug truncate">
-        {data.algorithm || 'Round Robin'}
-      </p>
-
-      {/* Connectors placed exactly at diamond vertices */}
-      <Handle type="target" position={Position.Left} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
-      <Handle type="source" position={Position.Right} className="!bg-sky-500 !w-3 !h-3 !border-2 !border-[var(--bg-surface)]" />
+      <Handle type="target" position={Position.Top}    className="!bg-sky-500 !border-[var(--bg-surface)]" />
+      <Handle type="source" position={Position.Bottom} className="!bg-sky-500 !border-[var(--bg-surface)]" />
+      <Handle type="target" position={Position.Left}   className="!bg-sky-400 !border-[var(--bg-surface)]" />
+      <Handle type="source" position={Position.Right}  className="!bg-sky-400 !border-[var(--bg-surface)]" />
     </ShapeWrapper>
   );
 }

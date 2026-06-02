@@ -2,6 +2,25 @@
 
 export const CHANGELOG = [
   {
+    version: 'v0.7.0',
+    date: '2026-06-03',
+    tag: 'major',
+    title: 'Advanced Annotation Nodes, Custom Edges & Canvas Control Suite',
+    summary: 'A massive canvas upgrade introducing dedicated client and annotation nodes (Frontend App, Zone Groups, Sticky Notes, Text Labels), smart protocol-aware connection edges, an automated Architecture Intelligence static analysis sidebar, and a full productivity toolbar with hotkey navigation.',
+    items: [
+      { type: 'new', text: 'Frontend Application Node — Visual node for detailing client applications (Web, Mobile) with predefined framework presets (React, Next.js, Vue, Angular, React Native, Expo)' },
+      { type: 'new', text: 'Zone Group Node — Interactive visual boundaries for containerizing, grouping, and layering related canvas components with custom descriptions and category icons' },
+      { type: 'new', text: 'Sticky Note Node — Colorful post-it notes (Yellow, Pink, Blue, Green, Purple) for adding custom inline canvas comments and annotations' },
+      { type: 'new', text: 'Text Label Node — Frameless lightweight text elements for custom section headers and visual titles on the canvas' },
+      { type: 'new', text: 'Right-Click Context Menu — Desktop-class context menu for quick actions (Fit View, Auto Layout, Select All, Paste, duplicate selection, delete selection, and adding notes/zones)' },
+      { type: 'new', text: 'Bottom Canvas Toolbar — Unified access to Undo/Redo, Zoom indicators, Fit View, Auto Layout, grid style cycling (Dots, Lines, Cross, None), Snap-to-Grid toggle, and multi-node Align/Distribute utilities' },
+      { type: 'new', text: 'Global Keyboard Shortcuts — System-wide hotkeys for editing and canvas controls, with an in-app help cheatsheet modal triggered by the "?" key' },
+      { type: 'new', text: 'Command Palette Search — Quick lookup overlay (Ctrl/Cmd + F) to instantly search and pan-zoom directly to any node on the canvas' },
+      { type: 'new', text: 'Smart Protocol-Aware Custom Edges — Dynamic animated connection lines with custom protocol badges (REST, gRPC, WebSocket, Redis, pub/sub, DB, FK, etc.) and SVG motion path flow dots' },
+      { type: 'new', text: 'Architecture Intelligence Sidebar — Static analysis engine that monitors canvas components to calculate a Health Score and provide optimization recommendations, security warnings, and bottleneck detection' },
+    ],
+  },
+  {
     version: 'v0.6.5',
     date: '2026-05-21',
     tag: 'minor',

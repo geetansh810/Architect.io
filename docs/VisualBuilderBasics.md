@@ -87,13 +87,40 @@ New nodes **snap to their default layer** zone when dropped.
 
 Click the **Auto Layout** button to automatically arrange nodes using the Dagre top-to-bottom algorithm. Nodes are positioned according to their layer zones.
 
-## Canvas Controls
+## Canvas Controls & Interaction
 
-- **Zoom**: Scroll or use +/- buttons
-- **Pan**: Click and drag on the canvas background
-- **MiniMap**: Overview of the entire canvas (bottom-right)
-- **Controls**: Fit view, zoom in/out, lock (bottom-left)
-- **Delete**: Select a node and press `Delete` or `Backspace`
+- **Zoom**: Scroll or use +/- buttons on the toolbar or control panel.
+- **Pan**: Click and drag on the canvas background, or hold space and drag.
+- **MiniMap**: Interactive overview of the entire canvas (bottom-right).
+- **Auto Layout**: Automatically arrange nodes using the Dagre top-to-bottom algorithm based on layer zones (triggered via toolbar button or `Ctrl/Cmd + L`).
+
+### Canvas Context Menu
+Right-click anywhere on the canvas to trigger a quick-action context menu. Actions include:
+- **Fit View** (`Ctrl/Cmd + 0`)
+- **Auto Layout** (`Ctrl/Cmd + L`)
+- **Paste Clipboard Components** (`Ctrl/Cmd + V`)
+- **Select All** (`Ctrl/Cmd + A`)
+- **Add Special Nodes** (Zone Groups, Sticky Notes, Text Labels)
+- **Duplicate Selected** (`Ctrl/Cmd + D`)
+- **Delete Selected** (`Delete` / `Backspace`)
+
+### Bottom Canvas Toolbar
+Located at the bottom center of the canvas viewport, offering quick access to:
+- **Undo / Redo** (`Ctrl/Cmd + Z`, `Ctrl/Cmd + Y`)
+- **Zoom controls & indicator**
+- **Grid Mode Selector**: Cycle background styles (Dots, Lines, Cross, None)
+- **Snap to Grid**: Toggle layout snapping (`S` key)
+- **Alignment Tools**: Align selected nodes along margins (Left, Center V, Right, Top, Center H, Bottom)
+- **Distribution Tools**: Distribute node spacing evenly (Horizontal, Vertical)
+
+### Command Palette Search
+Press `Ctrl/Cmd + F` to open the overlay search palette. You can search for nodes by name, type, database name, or description, and selecting a result will instantly pan and zoom the canvas viewport to focus on that component.
+
+### Keyboard Shortcuts
+Use global hotkeys to accelerate visual design work. Press `?` to toggle the in-app shortcuts panel. Key bindings include:
+- **Edit Actions**: Undo (`Ctrl+Z`), Redo (`Ctrl+Y`), Copy (`Ctrl+C`), Paste (`Ctrl+V`), Duplicate (`Ctrl+D`), Select All (`Ctrl+A`), Delete (`Delete` / `Backspace`)
+- **Canvas Operations**: Auto-layout (`Ctrl+L`), Fit view (`Ctrl+0`), Zoom in/out (`Ctrl+` / `Ctrl-`), Snap grid toggle (`S`)
+- **View / Tools**: Command palette search (`Ctrl+F`), Export diagram (`Ctrl+Shift+E`), Presentation Mode (`F5` / `Ctrl+Shift+P`)
 
 ## Properties Panel
 

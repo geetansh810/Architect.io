@@ -5,40 +5,44 @@
 
 @theme {
   --font-sans: "Inter", "Outfit", "Roboto", sans-serif;
-  
-  /* Shared Brand Colors */
-  --color-brand-50: #eef2ff;
+
+  /* Brand palette */
+  --color-brand-50:  #eef2ff;
   --color-brand-100: #e0e7ff;
-  --color-brand-500: #4f46e5; /* Indigo 600 */
-  --color-brand-600: #4338ca; /* Indigo 700 */
+  --color-brand-500: #4f46e5;
+  --color-brand-600: #4338ca;
   --color-brand-900: #312e81;
 }
 
+/* ── CSS Variables (Light) ───────────────────────────────────────────────────── */
 :root {
-  /* Light Theme (Default) - Off-white/Light-grey */
-  --bg-app: #f1f5f9;
-  --bg-surface: #ffffff;
-  --bg-sidebar: #f8fafc;
-  --border-main: #e2e8f0;
-  --text-main: #0f172a;
-  --text-muted: #64748b;
-  --node-bg: #ffffff;
+  --bg-app:        #f9fafb;
+  --bg-surface:    #ffffff;
+  --bg-sidebar:    #ffffff;
+  --border-main:   #e5e7eb;
+  --text-main:     #111827;
+  --text-muted:    #6b7280;
+  --node-bg:       #ffffff;
+  --canvas-grid:   #d1d5db;
+  --glass-bg:      rgba(255,255,255,0.85);
+  --glass-border:  rgba(229,231,235,0.9);
 }
 
+/* ── CSS Variables (Dark) ────────────────────────────────────────────────────── */
 .dark {
-  /* Dark Theme */
-  --bg-app: #0f172a;
-  --bg-surface: #1e293b;
-  --bg-sidebar: #0f172a;
-  --border-main: #334155;
-  --text-main: #f8fafc;
-  --text-muted: #94a3b8;
-  --node-bg: #1e293b;
+  --bg-app:        #0f0f11;
+  --bg-surface:    #18181b;
+  --bg-sidebar:    #0c0c0e;
+  --border-main:   #27272a;
+  --text-main:     #f4f4f5;
+  --text-muted:    #a1a1aa;
+  --node-bg:       #18181b;
+  --canvas-grid:   #3f3f46;
+  --glass-bg:      rgba(24,24,27,0.85);
+  --glass-border:  rgba(39,39,42,0.95);
 }
 
-html,
-body,
-#root {
+html, body, #root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -51,27 +55,92 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* ── Custom Scrollbars ───────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-main); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── ReactFlow Canvas Overrides ─────────────────────────────────────────────── */
+.react-flow { background-color: var(--bg-app) !important; }
+.react-flow__pane { cursor: default; }
+.react-flow__node { cursor: grab; }
+.react-flow__node:active { cursor: grabbing; }
+
+.react-flow__nodes {
+  z-index: 5 !important;
 }
-::-webkit-scrollbar-track {
-  background: transparent; 
-}
-::-webkit-scrollbar-thumb {
-  background: var(--border-main);
-  border-radius: 10px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+.react-flow__edge-label-renderer {
+  z-index: 4 !important;
 }
 
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+/* Snap-to-grid visual feedback */
+.react-flow__node.dragging {
+  filter: drop-shadow(0 16px 40px rgba(79,70,229,0.3));
 }
 
+/* ── Controls & MiniMap polish ────────────────────────────────────────────────── */
+.react-flow__controls {
+  border-radius: 14px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+}
+.react-flow__controls-button {
+  background: var(--bg-surface) !important;
+  border-color: var(--border-main) !important;
+  color: var(--text-muted) !important;
+}
+.react-flow__controls-button:hover {
+  background: var(--bg-app) !important;
+  color: var(--text-main) !important;
+}
+
+.react-flow__minimap {
+  border-radius: 16px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18) !important;
+}
+
+/* ── Edge Styles ─────────────────────────────────────────────────────────────── */
+.react-flow__edge-path {
+  stroke-width: 2 !important;
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+.react-flow__edge:hover .react-flow__edge-path {
+  stroke-width: 3 !important;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 3 !important;
+}
+
+/* ── Selection box ──────────────────────────────────────────────────────────── */
+.react-flow__selection {
+  background: rgba(79,70,229,0.06) !important;
+  border: 1.5px solid rgba(79,70,229,0.5) !important;
+  border-radius: 8px !important;
+}
+
+/* ── Glassmorphic utility classes ───────────────────────────────────────────── */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+}
+
+
+
+/* ── Node selection ring pulse ──────────────────────────────────────────────── */
+@keyframes selectionPulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(79,70,229,0.4), 0 0 20px rgba(79,70,229,0.15); }
+  50%       { box-shadow: 0 0 0 5px rgba(79,70,229,0.25), 0 0 30px rgba(79,70,229,0.2); }
+}
+
+/* ── Animate canvas toolbar in ─────────────────────────────────────────────── */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px) translateX(-50%); }
+  to   { opacity: 1; transform: translateY(0)   translateX(-50%); }
+}
