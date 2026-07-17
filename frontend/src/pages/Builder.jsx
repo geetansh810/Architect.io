@@ -52,6 +52,7 @@ import FrontendNode from '../components/nodes/FrontendNode';
 import ZoneGroup from '../components/nodes/ZoneGroup';
 import StickyNote from '../components/nodes/StickyNote';
 import TextLabel from '../components/nodes/TextLabel';
+import CategoryBox from '../components/nodes/CategoryBox';
 
 import CustomEdge from '../components/edges/CustomEdge';
 
@@ -95,6 +96,7 @@ const nodeTypes = {
   zoneGroup:          ZoneGroup,
   stickyNote:         StickyNote,
   textLabel:          TextLabel,
+  categoryBox:        CategoryBox,
 };
 
 const edgeTypes = {
@@ -209,14 +211,28 @@ function BuilderCanvas({ workflow, isTemplate }) {
     setIsGenerating(true);
     try {
       const payload = parseToBackendPayload();
+      if (!payload.entities || payload.entities.length === 0) {
+        alert('Add at least one Entity node to generate code.');
+        return;
+      }
       const res = await api('/generate', { method: 'POST', body: JSON.stringify(payload) });
-      if (!res.ok) { const d = await res.json().catch(() => ({})); throw new Error(d.error || 'Generation failed'); }
+      if (!res.ok) {
+        let errorMsg = 'Generation failed';
+        try {
+          const d = await res.json();
+          errorMsg = d.error || errorMsg;
+        } catch {
+          errorMsg = `Server error (${res.status}). Please try again.`;
+        }
+        throw new Error(errorMsg);
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = `${workflow.name.replace(/\s+/g, '-').toLowerCase()}-backend.zip`;
       document.body.appendChild(a); a.click(); a.remove();
+      window.URL.revokeObjectURL(url);
     } catch (err) { alert('Code Generation Error: ' + err.message); }
     finally { setIsGenerating(false); }
   };
@@ -486,6 +502,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
                     webhookNode: '#d946ef', cacheNode: '#ef4444', loadBalancerNode: '#0ea5e9',
                     cdnNode: '#f59e0b', queueNode: '#f97316', counterServiceNode: '#8b5cf6',
                     replicaNode: '#94a3b8', zoneGroup: '#64748b', stickyNote: '#fbbf24',
+                    categoryBox: '#3b82f6',
                   };
                   return colorMap[n.type] || '#64748b';
                 }}
@@ -651,7 +668,12 @@ export default function Builder({ isTemplate = false }) {
           if (custom) {
             setWorkflow({
               name: custom.name,
-              architecture_json: { nodes: custom.nodes, edges: custom.edges, documentation: custom.documentation || `# ${custom.name}\n\n${custom.description}` }
+              architecture_json: {
+                nodes: custom.nodes,
+                edges: custom.edges,
+                categoryBoxes: custom.categoryBoxes || [],
+                documentation: custom.documentation || `# ${custom.name}\n\n${custom.description}`
+              }
             });
           }
         }

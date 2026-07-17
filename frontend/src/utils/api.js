@@ -14,8 +14,8 @@ export const api = async (path, options = {}) => {
       },
     });
 
-    // Auto-logout on server errors (new code breaks) or auth errors
-    if (res.status === 401 || res.status >= 500) {
+    // Auto-logout only on auth errors (not server errors — those should surface to the user)
+    if (res.status === 401) {
       window.dispatchEvent(new Event('system-error-logout'));
     }
 
