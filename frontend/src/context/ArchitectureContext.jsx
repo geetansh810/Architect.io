@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
+import { validateConnection, ANNOTATION_TYPES } from '../utils/connectionRules';
 
 const ArchitectureContext = createContext();
 
@@ -13,7 +14,29 @@ const COLUMN_MAPPING = {
 };
 
 export function ArchitectureProvider({ children, initialData, onSave }) {
-  const [nodes, setNodes] = useState(initialData?.nodes || []);
+  // Merge categoryBoxes (from templates) into nodes on initialization
+  const buildInitialNodes = (data) => {
+    const base = [...(data?.nodes || [])];
+    if (data?.categoryBoxes?.length) {
+      data.categoryBoxes.forEach((box, i) => {
+        base.push({
+          id: box.id || `categoryBox-init-${Date.now()}-${i}`,
+          type: 'categoryBox',
+          position: box.position || { x: 50 + i * 440, y: 50 },
+          style: { zIndex: -1 },
+          data: {
+            title: box.title || 'Category',
+            color: box.color || 'blue',
+            width: box.dimensions?.width || 400,
+            height: box.dimensions?.height || 250,
+          },
+        });
+      });
+    }
+    return base;
+  };
+
+  const [nodes, setNodes] = useState(() => buildInitialNodes(initialData));
   const [edges, setEdges] = useState(initialData?.edges || []);
   const [documentation, setDocumentation] = useState(initialData?.documentation || '');
   const [pendingConnection, setPendingConnection] = useState(null);
@@ -118,30 +141,28 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
 
   const onConnect = useCallback(
     (params) => {
-      // Find source and target node types
       const sourceNode = nodes.find(n => n.id === params.source);
       const targetNode = nodes.find(n => n.id === params.target);
-      
-      let label = '';
-      if (sourceNode?.type === 'entityNode' && targetNode?.type === 'apiNode') {
-        label = 'Exposes CRUD';
-      } else if (sourceNode?.type === 'apiNode' && targetNode?.type === 'logicNode') {
-        label = `Triggers ${targetNode.data.hook || 'Logic'}`;
-      } else if (targetNode?.type === 'logicNode') {
-        label = 'Triggers Logic';
-      } else if (sourceNode?.type === 'middlewareNode') {
-        label = 'Applies Middleware';
-      } else if (targetNode?.type === 'storageNode') {
-        label = 'Saves to Storage';
-      } else if (targetNode?.type === 'webhookNode') {
-        label = 'Triggers Webhook';
-      } else if (sourceNode?.type === 'entityNode' && targetNode?.type === 'entityNode') {
-        // Intercept entity-entity connection
+
+      // Rectify the connection against the rule matrix before it lands
+      const check = validateConnection(sourceNode, targetNode, edges);
+      if (!check.valid) {
+        showToast(check.reason || 'Invalid connection', 'error', 3500);
+        return;
+      }
+
+      if (sourceNode?.type === 'entityNode' && targetNode?.type === 'entityNode') {
+        // Intercept entity-entity connection → relationship modal
         setPendingConnection(params);
         return;
       }
-      
-      const newEdge = { 
+
+      let label = check.label || '';
+      if (sourceNode?.type === 'apiNode' && targetNode?.type === 'logicNode') {
+        label = `Triggers ${targetNode.data.hook || 'Logic'}`;
+      }
+
+      const newEdge = {
         ...params, 
         animated: true,
         label,
@@ -155,8 +176,29 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       setEdges(nextEdges);
       takeSnapshot(nodes, nextEdges);
     },
-    [nodes, edges, takeSnapshot]
+    [nodes, edges, takeSnapshot, showToast]
   );
+
+  // ── AI Architect: apply a generated/refined graph to the canvas ──
+  const applyAIWorkflow = useCallback(({ nodes: aiNodes, edges: aiEdges, documentation: aiDocs }, mode = 'replace') => {
+    // Annotations (sticky notes, boxes) survive an AI replace
+    const annotations = mode === 'replace' ? nodes.filter(n => ANNOTATION_TYPES.includes(n.type)) : [];
+    const baseNodes = mode === 'merge' ? nodes : annotations;
+    const baseEdges = mode === 'merge' ? edges : [];
+
+    const existingIds = new Set(baseNodes.map(n => n.id));
+    const incomingNodes = (aiNodes || []).filter(n => !existingIds.has(n.id));
+    const existingEdgeKeys = new Set(baseEdges.map(e => `${e.source}->${e.target}`));
+    const incomingEdges = (aiEdges || []).filter(e => !existingEdgeKeys.has(`${e.source}->${e.target}`));
+
+    const nextNodes = [...baseNodes, ...incomingNodes];
+    const nextEdges = [...baseEdges, ...incomingEdges];
+    setNodes(nextNodes);
+    setEdges(nextEdges);
+    if (aiDocs) setDocumentation(aiDocs);
+    takeSnapshot(nextNodes, nextEdges);
+    showToast(`AI architecture applied: ${incomingNodes.length} nodes, ${incomingEdges.length} connections`, 'info', 4000);
+  }, [nodes, edges, takeSnapshot, showToast]);
 
   const confirmConnection = useCallback((relationshipData) => {
     if (!pendingConnection) return;
@@ -204,43 +246,48 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
 
   const addNode = useCallback((type, position) => {
     const id = `${type}-${Date.now()}`;
+    const nodeData = type === 'entityNode' 
+      ? { name: 'NewEntity', fields: [] }
+      : type === 'apiNode'
+      ? { route: '/new-api', authEnabled: false }
+      : type === 'authNode'
+      ? { method: 'JWT', expiry: '24h', secret: '' }
+      : type === 'dbNode'
+      ? { type: 'mongodb', dbName: 'app_db', uri: '' }
+      : type === 'mailNode'
+      ? { provider: 'SMTP', fromEmail: 'noreply@app.com' }
+      : type === 'logicNode'
+      ? { name: 'Process Payment', hook: 'before-create' }
+      : type === 'middlewareNode'
+      ? { middlewareType: 'Rate Limiter', config: { windowMs: 15 * 60 * 1000, maxRequests: 100 } }
+      : type === 'storageNode'
+      ? { provider: 'Local (Multer)', maxSizeMB: 5, allowedTypes: ['images'] }
+      : type === 'cronNode'
+      ? { jobName: 'dailyCleanup', schedule: '0 0 * * *' }
+      : type === 'webhookNode'
+      ? { direction: 'Incoming', provider: 'Stripe', path: '/stripe-webhooks' }
+      : type === 'cacheNode'
+      ? { provider: 'Redis', evictionPolicy: 'LRU', ttl: 3600, strategy: 'Cache-Aside' }
+      : type === 'loadBalancerNode'
+      ? { algorithm: 'Round Robin', healthPath: 'health', intervalSec: 30, sslTermination: true }
+      : type === 'cdnNode'
+      ? { provider: 'Cloudflare', redirectType: 'HTTP 302', regions: 'Global' }
+      : type === 'queueNode'
+      ? { broker: 'Kafka', topic: 'click-events', consumerGroup: 'analytics-service', partitions: 3 }
+      : type === 'counterServiceNode'
+      ? { strategy: 'Counter + Base62', encoding: 'Base62', batchSize: 1000, codeLength: 7 }
+      : type === 'replicaNode'
+      ? { replicaCount: 2, strategy: 'Read/Write Split', lagToleranceMs: 100 }
+      : type === 'categoryBox'
+      ? { title: 'Category', color: 'blue', width: 400, height: 250 }
+      : {};
+    // Category boxes should always sit behind all nodes and edges
     const newNode = {
       id,
       type,
       position,
-      data: type === 'entityNode' 
-        ? { name: 'NewEntity', fields: [] }
-        : type === 'apiNode'
-        ? { route: '/new-api', authEnabled: false }
-        : type === 'authNode'
-        ? { method: 'JWT', expiry: '24h', secret: '' }
-        : type === 'dbNode'
-        ? { type: 'mongodb', dbName: 'app_db', uri: '' }
-        : type === 'mailNode'
-        ? { provider: 'SMTP', fromEmail: 'noreply@app.com' }
-        : type === 'logicNode'
-        ? { name: 'Process Payment', hook: 'before-create' }
-        : type === 'middlewareNode'
-        ? { middlewareType: 'Rate Limiter', config: { windowMs: 15 * 60 * 1000, maxRequests: 100 } }
-        : type === 'storageNode'
-        ? { provider: 'Local (Multer)', maxSizeMB: 5, allowedTypes: ['images'] }
-        : type === 'cronNode'
-        ? { jobName: 'dailyCleanup', schedule: '0 0 * * *' }
-        : type === 'webhookNode'
-        ? { direction: 'Incoming', provider: 'Stripe', path: '/stripe-webhooks' }
-        : type === 'cacheNode'
-        ? { provider: 'Redis', evictionPolicy: 'LRU', ttl: 3600, strategy: 'Cache-Aside' }
-        : type === 'loadBalancerNode'
-        ? { algorithm: 'Round Robin', healthPath: 'health', intervalSec: 30, sslTermination: true }
-        : type === 'cdnNode'
-        ? { provider: 'Cloudflare', redirectType: 'HTTP 302', regions: 'Global' }
-        : type === 'queueNode'
-        ? { broker: 'Kafka', topic: 'click-events', consumerGroup: 'analytics-service', partitions: 3 }
-        : type === 'counterServiceNode'
-        ? { strategy: 'Counter + Base62', encoding: 'Base62', batchSize: 1000, codeLength: 7 }
-        : type === 'replicaNode'
-        ? { replicaCount: 2, strategy: 'Read/Write Split', lagToleranceMs: 100 }
-        : {}
+      ...(type === 'categoryBox' ? { style: { zIndex: -1 } } : {}),
+      data: nodeData,
     };
     const nextNds = [...nodes, newNode];
     setNodes(nextNds);
@@ -360,7 +407,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     if (nodes.length === 0) return;
     const columnCounts = {};
     const nextNodes = nodes.map(node => {
-      if (['zoneGroup', 'stickyNote', 'textLabel'].includes(node.type)) {
+      if (['zoneGroup', 'stickyNote', 'textLabel', 'categoryBox'].includes(node.type)) {
         return node;
       }
       const col = COLUMN_MAPPING[node.type] !== undefined ? COLUMN_MAPPING[node.type] : 2;
@@ -569,7 +616,15 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       }
     });
 
-    return { entities, apis, auth, database: db, mailer, middlewares, storage, cronJobs, webhooks, relationships, caches, loadBalancers, cdns, queues, counterServices, replicas, documentation };
+    return {
+      entities, apis, auth, database: db, mailer, middlewares, storage, cronJobs, webhooks,
+      relationships, caches, loadBalancers, cdns, queues, counterServices, replicas, documentation,
+      // Raw graph so the server can re-validate wiring before generating code
+      graph: {
+        nodes: nodes.map(n => ({ id: n.id, type: n.type, data: n.data })),
+        edges: edges.map(e => ({ id: e.id, source: e.source, target: e.target, label: e.label, data: e.data })),
+      },
+    };
   };
 
   return (
@@ -580,7 +635,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       onEdgesChange,
       onConnect,
       updateNodeData,
-      addNode, updateEdgeData, removeElements, setNodes, setEdges,
+      addNode, updateEdgeData, removeElements, setNodes, setEdges, applyAIWorkflow,
       parseToBackendPayload, pendingConnection, setPendingConnection, confirmConnection,
       documentation, setDocumentation, onNodesDelete, toastMessage, showToast,
       undo, redo, canUndo, canRedo, clipboard, copyNodes, pasteNodes, duplicateNodes,

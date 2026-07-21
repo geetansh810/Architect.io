@@ -39,8 +39,9 @@ export function Templates() {
       <div className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-32 pb-16">
         {/* Header */}
         <div className="mb-10">
-          <h1 className="text-4xl md:text-5xl font-black text-[var(--text-main)] mb-3 tracking-tight">Architecture Templates</h1>
-          <p className="text-[var(--text-muted)] font-medium text-lg">Start with a production-proven architecture. Customize to fit your needs.</p>
+          <p className="eyebrow text-brand-500 mb-4">Blueprint library</p>
+          <h1 className="font-display text-3xl md:text-4xl font-bold text-[var(--text-main)] mb-3">Architecture templates</h1>
+          <p className="text-[var(--text-muted)] font-medium text-base md:text-lg">Start with a production-proven architecture. Customize it to fit your domain.</p>
         </div>
 
         {/* Search + Filters */}

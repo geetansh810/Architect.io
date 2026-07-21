@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Trash2, Code2, Clock, ChevronRight, Layout as LayoutIcon, Loader2, Settings, Layers, BookOpen, Database, CheckCircle2, Globe, Cpu, Mail, Sparkles, Zap, Brain, MessageSquare, Bot, Lock } from 'lucide-react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Plus, Loader2, Sparkles, Zap, Brain, MessageSquare, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { api } from '../utils/api.js';
 import { startDashboardTour } from '../utils/tour';
@@ -17,6 +17,55 @@ export default function Dashboard() {
   const [editingWorkflow, setEditingWorkflow] = useState(null);
   const [newName, setNewName] = useState('');
   const navigate = useNavigate();
+
+  // ── AI Builder tab state ──
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [aiStatus, setAiStatus] = useState(null);
+
+  useEffect(() => {
+    if (activeTab === 'AI Builder' && aiStatus === null) {
+      api('/ai/status').then(r => r.json()).then(setAiStatus).catch(() => setAiStatus({ configured: false }));
+    }
+  }, [activeTab, aiStatus]);
+
+  const generateWithAI = async () => {
+    if (aiPrompt.trim().length < 10) {
+      setAiError('Describe your backend in at least a sentence.');
+      return;
+    }
+    setAiLoading(true);
+    setAiError(null);
+    try {
+      const res = await api('/ai/generate-workflow', {
+        method: 'POST',
+        body: JSON.stringify({ prompt: aiPrompt.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `AI request failed (${res.status})`);
+
+      const createRes = await api('/workflows', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: data.name || 'AI Architecture',
+          architecture_json: {
+            nodes: data.nodes,
+            edges: data.edges,
+            documentation: data.documentation || '',
+            database: 'mongodb',
+          },
+        }),
+      });
+      const project = await createRes.json();
+      if (!createRes.ok) throw new Error(project.error || 'Could not save the generated project.');
+      navigate(`/workflow/${project.id}`);
+    } catch (err) {
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const fetchWorkflows = async () => {
     try {
@@ -128,7 +177,7 @@ export default function Dashboard() {
     >
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} id="tour-welcome-banner">
-          <h1 className="text-4xl font-black tracking-tight mb-2">{activeTab}</h1>
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">{activeTab}</h1>
           <p className="text-[var(--text-muted)] font-medium">
             {activeTab === 'Projects' ? 'Manage and scale your backend architectures.' :
               activeTab === 'AI Builder' ? 'Describe your backend in plain English — let AI design it.' :
@@ -195,109 +244,122 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-10 w-full"
+            className="space-y-8 w-full"
           >
-            {/* Hero Banner */}
-            <div className="relative overflow-hidden rounded-[2.5rem] p-12 bg-gradient-to-br from-violet-600 via-indigo-600 to-brand-500 text-white shadow-2xl shadow-violet-500/20">
-              <div className="absolute top-0 right-0 p-10 opacity-10">
-                <Sparkles size={180} />
-              </div>
-              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-                <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur flex items-center justify-center shrink-0 border border-white/20 shadow-xl">
-                  <Sparkles className="w-10 h-10 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-3 mb-3">
-                    <h2 className="text-4xl font-black tracking-tight">AI Backend Builder</h2>
-                    <span className="px-3 py-1 bg-white/15 backdrop-blur border border-white/20 rounded-full text-xs font-black uppercase tracking-widest">Coming Soon</span>
+            {/* Prompt panel — the actual builder */}
+            <div className="rounded-2xl border border-[var(--border-main)] bg-[var(--bg-surface)] overflow-hidden">
+              <div className="px-6 py-4 border-b border-[var(--border-main)] flex flex-wrap items-center justify-between gap-3 bg-[var(--bg-sidebar)]">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center">
+                    <Sparkles size={18} />
                   </div>
-                  <p className="text-white/80 text-lg font-medium max-w-2xl leading-relaxed">
-                    Describe your backend in plain English. Our AI will design the entire architecture — entities, APIs, relationships, auth, and business logic — ready to generate and deploy instantly.
-                  </p>
+                  <div>
+                    <h2 className="font-display font-bold">Describe your backend</h2>
+                    <p className="text-xs text-[var(--text-muted)]">Gemini designs the graph · the rectifier verifies every connection · you get an editable project</p>
+                  </div>
+                </div>
+                {aiStatus && (
+                  <span className={`eyebrow flex items-center gap-2 ${aiStatus.configured ? 'text-emerald-500' : 'text-amber-500'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${aiStatus.configured ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                    {aiStatus.configured ? `${aiStatus.model} ready` : 'api key missing'}
+                  </span>
+                )}
+              </div>
+
+              <div className="p-6">
+                {aiStatus && !aiStatus.configured && (
+                  <div className="flex items-start gap-3 p-4 mb-5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-sm">
+                    <AlertTriangle size={17} className="text-amber-500 shrink-0 mt-0.5" />
+                    <p>
+                      Add <code className="px-1.5 py-0.5 rounded bg-[var(--bg-app)] font-mono text-xs">GEMINI_API_KEY</code> to{' '}
+                      <code className="px-1.5 py-0.5 rounded bg-[var(--bg-app)] font-mono text-xs">backend/.env</code> (free key at{' '}
+                      <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noreferrer" className="text-brand-500 underline">aistudio.google.com</a>)
+                      and restart the backend.
+                    </p>
+                  </div>
+                )}
+
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={4}
+                  placeholder="e.g. A subscription billing backend with organizations, plans, invoices, Stripe webhooks, usage metering and a nightly reconciliation job…"
+                  className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] focus:border-violet-500 outline-none rounded-xl p-4 text-sm resize-none transition-colors"
+                />
+
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {[
+                    'E-commerce: products, carts, orders, payments, inventory sync',
+                    'HR system: employees, leave requests, approvals, payroll cron',
+                    'Logistics: shipments, warehouses, tracking events, SLA alerts',
+                  ].map((p) => (
+                    <button key={p} onClick={() => setAiPrompt(p)}
+                      className="text-[11px] font-medium px-3 py-1.5 rounded-full border border-[var(--border-main)] text-[var(--text-muted)] hover:border-violet-500 hover:text-violet-500 transition-colors">
+                      {p}
+                    </button>
+                  ))}
+                </div>
+
+                {aiError && (
+                  <div className="flex items-start gap-2.5 p-3.5 mt-4 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-500 font-medium">
+                    <AlertTriangle size={16} className="shrink-0 mt-0.5" /> {aiError}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-5">
+                  {aiLoading ? (
+                    <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-2">
+                      <Loader2 size={13} className="animate-spin text-violet-500" />
+                      Designing your architecture — this takes a few seconds…
+                    </span>
+                  ) : <span />}
+                  <button
+                    onClick={generateWithAI}
+                    disabled={aiLoading || (aiStatus && !aiStatus.configured)}
+                    className="px-6 py-3 rounded-xl bg-violet-500 hover:bg-violet-600 text-white font-bold text-sm shadow-lg shadow-violet-500/25 transition-all disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+                    Create project with AI
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Feature Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* What happens under the hood */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {[
                 {
-                  icon: MessageSquare,
-                  colorClass: 'bg-violet-500/10 text-violet-500',
-                  title: 'Natural Language Input',
-                  desc: 'Just type "Build me an e-commerce backend with user auth, product catalog, and order management" and watch the canvas build itself.'
+                  icon: MessageSquare, colorClass: 'bg-violet-500/10 text-violet-500',
+                  title: 'You describe it',
+                  desc: 'Plain language, as detailed as you like — domain entities, integrations, background work.'
                 },
                 {
-                  icon: Brain,
-                  colorClass: 'bg-indigo-500/10 text-indigo-500',
-                  title: 'Intelligent Architecture',
-                  desc: 'The AI understands your domain and automatically suggests data models, relationships, API endpoints, middleware, and business logic hooks.'
+                  icon: Brain, colorClass: 'bg-indigo-500/10 text-indigo-500',
+                  title: 'AI designs, rules verify',
+                  desc: 'Gemini proposes the full graph; the connection rectifier drops or flips anything invalid before you see it.'
                 },
                 {
-                  icon: Zap,
-                  colorClass: 'bg-blue-500/10 text-blue-500',
-                  title: 'Instant Code Generation',
-                  desc: 'Once the AI designs your architecture, export production-ready Node.js/MongoDB code with a single click. No manual wiring needed.'
+                  icon: Zap, colorClass: 'bg-blue-500/10 text-blue-500',
+                  title: 'You review and export',
+                  desc: 'The graph lands as an editable project. Tweak nodes, then generate the production codebase.'
                 }
               ].map(({ icon: Icon, colorClass, title, desc }) => (
-                <div key={title} className="p-8 rounded-[2rem] bg-[var(--bg-surface)] border border-[var(--border-main)] hover:border-violet-500/30 transition-all group">
-                  <div className={`w-14 h-14 rounded-2xl ${colorClass} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                    <Icon size={28} />
+                <div key={title} className="p-6 rounded-2xl bg-[var(--bg-surface)] border border-[var(--border-main)]">
+                  <div className={`w-10 h-10 rounded-xl ${colorClass} flex items-center justify-center mb-4`}>
+                    <Icon size={19} />
                   </div>
-                  <h3 className="text-xl font-bold mb-3">{title}</h3>
-                  <p className="text-[var(--text-muted)] leading-relaxed font-medium text-sm">{desc}</p>
+                  <h3 className="font-display font-bold mb-1.5">{title}</h3>
+                  <p className="text-[var(--text-muted)] leading-relaxed text-sm">{desc}</p>
                 </div>
               ))}
             </div>
 
-            {/* How It Works */}
-            <div className="p-10 rounded-[2.5rem] bg-[var(--bg-surface)] border border-[var(--border-main)]">
-              <h3 className="text-2xl font-black mb-2">How it will work</h3>
-              <p className="text-[var(--text-muted)] font-medium mb-8">A glimpse of the AI Builder experience coming to Architect.io</p>
-              <div className="space-y-6">
-                {[
-                  {
-                    num: '1', color: 'bg-violet-500/10 text-violet-400',
-                    title: 'Type your idea',
-                    content: (
-                      <div className="bg-[var(--bg-app)] border border-[var(--border-main)] rounded-2xl px-5 py-4 font-mono text-sm text-[var(--text-muted)] flex items-center gap-3 mt-2">
-                        <Bot className="w-4 h-4 text-violet-400 shrink-0" />
-                        <span className="italic">"Create a SaaS platform with multi-tenant orgs, JWT auth, subscription plans, and a usage analytics dashboard"</span>
-                      </div>
-                    )
-                  },
-                  {
-                    num: '2', color: 'bg-indigo-500/10 text-indigo-400',
-                    title: 'AI designs the architecture',
-                    content: <p className="text-sm text-[var(--text-muted)] font-medium mt-1">Entities, APIs, relationships, auth middleware, and logic hooks are automatically placed on your canvas — fully editable before export.</p>
-                  },
-                  {
-                    num: '3', color: 'bg-brand-500/10 text-brand-500',
-                    title: 'Review, tweak, and export',
-                    content: <p className="text-sm text-[var(--text-muted)] font-medium mt-1">Refine any node, adjust field types, toggle auth guards, then export production-ready code in seconds.</p>
-                  }
-                ].map(({ num, color, title, content }) => (
-                  <div key={num} className="flex gap-4 items-start">
-                    <div className={`w-9 h-9 rounded-xl ${color} flex items-center justify-center shrink-0 font-black text-sm mt-0.5`}>{num}</div>
-                    <div className="flex-1">
-                      <p className="font-bold">{title}</p>
-                      {content}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Status Banner */}
-            <div className="flex flex-col sm:flex-row items-center gap-6 p-8 rounded-[2rem] border border-dashed border-violet-500/30 bg-violet-500/5">
-              <Lock className="w-8 h-8 text-violet-400 shrink-0" />
-              <div className="flex-1 text-center sm:text-left">
-                <p className="font-black text-lg">Feature in Development</p>
-                <p className="text-[var(--text-muted)] font-medium text-sm mt-1">AI Builder is actively being developed by the Architect.io team. This tab will unlock automatically when the feature ships.</p>
-              </div>
-              <button disabled className="shrink-0 px-6 py-3 bg-violet-500/20 text-violet-400 border border-violet-500/30 rounded-2xl font-black text-sm cursor-not-allowed opacity-70 whitespace-nowrap">
-                🚀 Coming Soon
-              </button>
+            <div className="flex items-center gap-3 p-5 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 text-sm">
+              <CheckCircle2 size={18} className="text-emerald-500 shrink-0" />
+              <p>
+                Prefer the canvas? The same AI lives inside every project — open one and use the{' '}
+                <span className="font-bold text-violet-500">AI Architect</span> button to create or refine architectures in place.
+              </p>
             </div>
           </motion.div>
         )}

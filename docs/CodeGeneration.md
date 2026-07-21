@@ -5,20 +5,26 @@ Architect.io is not just a diagramming tool — it's a **full code generator** t
 ## How It Works
 
 1. The canvas state is serialised into an **Architecture JSON** (nodes + edges + properties).
-2. The **Visual Parser** iterates through the nodes and edges.
-3. Templates are used to generate multiple output formats.
+2. Before generation, the graph is run through the **Connection Rectification & Validation** engine — see [Advanced Features](./AdvancedFeatures.md). Blocking errors must be fixed; warnings can be acknowledged in the Validation Report modal.
+3. The **Visual Parser** iterates through the validated nodes and edges.
+4. Templates are used to generate a layered, production-grade project.
 
 ## Generated Output
 
 ### Express.js Project
-For each node in your architecture, the parser generates:
+The generator produces a layered enterprise structure, not a flat MVC dump:
 
-- **Mongoose Models**: One per Entity node with full schema, timestamps, and validation.
-- **Express Controllers**: CRUD logic, custom service hooks, pagination, and error handling.
-- **Express Routes**: RESTful endpoints with proper HTTP verb mapping.
-- **Middlewares**: Auth guards, rate limiters, CORS, file upload handlers.
-- **Services**: Business logic files for Logic nodes and background workers.
-- **Configuration**: `app.js` entry point, `package.json` with all dependencies.
+- `src/config` — env-driven configuration, MongoDB + Redis bootstrap.
+- `src/models` — one Mongoose model per Entity node, with indexes, relationship refs, and clean JSON output.
+- `src/validations` — `express-validator` rule sets derived from each entity's field constraints.
+- `src/services` — business layer: pagination, filtering, lifecycle hooks, and cache-aware reads.
+- `src/controllers` — thin HTTP layer built on `asyncHandler` + `ApiError`.
+- `src/routes` — one router per entity, plus a versioned route index and a health endpoint.
+- `src/hooks` — lifecycle business-logic hooks for Logic nodes.
+- `src/queues` — BullMQ or Kafka consumer workers for Queue nodes.
+- `src/jobs` — `node-cron` scheduled jobs for Cron nodes.
+- `src/webhooks` — signed webhook receivers for Webhook nodes.
+- **Configuration**: `app.js`/`server.js` entry points, `package.json` with all detected dependencies.
 
 ### Docker Compose
 A `docker-compose.yml` is generated based on your architecture:
@@ -39,7 +45,7 @@ services:
       - "27017:27017"
 ```
 
-Redis, Kafka, and other services are added automatically when corresponding nodes exist.
+Mongo and Redis services are provisioned automatically whenever the architecture uses a Database, Cache, or (non-Kafka) Queue node; Kafka-backed queues are documented in the generated README instead.
 
 ### Environment Template
 A `.env.example` file is generated with all required environment variables:
@@ -76,25 +82,37 @@ A Mermaid flowchart diagram is generated from your edges, showing the complete d
 
 ```text
 /generated-backend
-├── /controllers
-│   ├── productController.js
-│   ├── orderController.js
-│   └── authController.js
-├── /models
-│   ├── Product.js
-│   ├── Order.js
-│   └── User.js
-├── /routes
-│   ├── productRoutes.js
-│   ├── orderRoutes.js
-│   └── authRoutes.js
-├── /services
-│   └── notificationService.js
-├── /middlewares
-│   ├── auth.js
-│   ├── rateLimiter.js
-│   └── upload.js
+├── /src
+│   ├── /config
+│   │   └── index.js
+│   ├── /models
+│   │   ├── Product.js
+│   │   ├── Order.js
+│   │   └── User.js
+│   ├── /validations
+│   │   ├── productValidation.js
+│   │   └── orderValidation.js
+│   ├── /services
+│   │   ├── productService.js
+│   │   └── notificationService.js
+│   ├── /controllers
+│   │   ├── productController.js
+│   │   └── orderController.js
+│   ├── /routes
+│   │   ├── productRoutes.js
+│   │   ├── orderRoutes.js
+│   │   └── index.js
+│   ├── /hooks
+│   │   └── processPayment.js
+│   ├── /queues
+│   │   └── analyticsWorker.js
+│   ├── /jobs
+│   │   └── dailyCleanup.js
+│   └── /webhooks
+│       └── stripeWebhook.js
 ├── app.js
+├── server.js
+├── Dockerfile
 ├── docker-compose.yml
 ├── package.json
 ├── README.md

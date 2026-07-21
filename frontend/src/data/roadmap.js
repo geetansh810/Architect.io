@@ -47,6 +47,42 @@ export const ROADMAP_COLUMNS = [
 export const ROADMAP_ITEMS = [
   // ─── Shipped ───────────────────────────────────────────────────────
   {
+    id: 'ship-25',
+    column: 'shipped',
+    title: 'AI Architecture Assistant',
+    description: 'Describe your system in plain English and Gemini generates the full architecture canvas for you — or refines whatever is already on the canvas.',
+    category: 'AI',
+    votes: 0,
+    version: 'v0.8.0',
+  },
+  {
+    id: 'ship-24',
+    column: 'shipped',
+    title: 'Connection Rectification & Validation Report',
+    description: 'Canonical connection-rule engine rejects invalid edges live on the canvas, plus a full pre-generation report catching orphan routes, bad identifiers, and disconnected nodes.',
+    category: 'Core',
+    votes: 0,
+    version: 'v0.8.0',
+  },
+  {
+    id: 'ship-23',
+    column: 'shipped',
+    title: 'Category Box Node',
+    description: 'Resizable, colour-coded background container for visually grouping and labelling sections of the canvas.',
+    category: 'Canvas',
+    votes: 0,
+    version: 'v0.8.0',
+  },
+  {
+    id: 'ship-22',
+    column: 'shipped',
+    title: 'Enterprise Code Generator Overhaul',
+    description: 'Generated Express projects are now layered into config, models, validations, services, controllers, routes, hooks, queues, jobs, and webhooks — with auto-provisioned Docker services.',
+    category: 'Code Gen',
+    votes: 0,
+    version: 'v0.8.0',
+  },
+  {
     id: 'ship-21',
     column: 'shipped',
     title: 'Canvas Keyboard Shortcuts System',
@@ -238,22 +274,13 @@ export const ROADMAP_ITEMS = [
 
   // ─── In Progress ───────────────────────────────────────────────────
   {
-    id: 'wip-1',
-    column: 'in-progress',
-    title: 'AI Architecture Assistant',
-    description: 'Describe your system in plain English and have AI generate the architecture canvas for you.',
-    category: 'AI',
-    votes: 534,
-    eta: 'July 2025',
-  },
-  {
     id: 'wip-2',
     column: 'in-progress',
     title: 'GitHub Integration',
     description: 'Push generated code directly to a GitHub repository. Commit, branch, and PR from within Architect.io.',
     category: 'Integrations',
     votes: 289,
-    eta: 'July 2025',
+    eta: 'August 2026',
   },
   {
     id: 'wip-3',
@@ -262,7 +289,7 @@ export const ROADMAP_ITEMS = [
     description: 'Multiple users editing the same canvas simultaneously with presence indicators and live cursors.',
     category: 'Collaboration',
     votes: 347,
-    eta: 'August 2025',
+    eta: 'September 2026',
   },
 
   // ─── Planned ───────────────────────────────────────────────────────

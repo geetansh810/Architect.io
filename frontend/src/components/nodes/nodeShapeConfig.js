@@ -141,6 +141,12 @@ export const NODE_SHAPE_CONFIG = {
   },
 
   // ── Annotation nodes (visual-only, no code gen) ──────────────────────────────
+  categoryBox: {
+    shape: 'categoryBox', accentClass: 'blue',
+    label: 'Category Box', category: 'Annotations',
+    techIcon: null, glowColor: '59,130,246',
+    compactLabel: 'Box', codeGen: false,
+  },
   zoneGroup: {
     shape: 'zone', accentClass: 'slate',
     label: 'Zone Group', category: 'Annotations',

@@ -128,6 +128,28 @@ Architect.io supports complex backend patterns and production infrastructure thr
 - Asynchronous lines are rendered as dashed edges.
 - Interactive hover transitions scale connection handles and glow edge paths.
 
+## AI Architect Assistant
+
+- Describe a backend in plain English and **Gemini** (`gemini-2.5-flash` by default) generates a complete node/edge graph, ready to review and apply to the canvas.
+- Two modes: **Create new workflow** (replaces the canvas, keeping annotations) and **Refine current canvas** (extends the existing architecture from a follow-up prompt).
+- Every AI-generated graph is run through the same connection-rule validator used for manual edits, with auto-corrections surfaced before you apply the result.
+- Requires a `GEMINI_API_KEY` in `backend/.env` — the modal shows setup instructions and a link to create a free key when it isn't configured yet.
+- Backend endpoints: `GET /api/ai/status`, `POST /api/ai/generate-workflow`, `POST /api/ai/refine-workflow`.
+
+## Connection Rectification & Validation Report
+
+- A canonical connection-rule matrix (shared between frontend and backend) defines every valid source → target node pairing and its edge label.
+- **Live rectification**: dragging an invalid connection on the canvas is rejected immediately with a toast, including a hint when the direction is simply reversed.
+- **Pre-generation report**: before code generation, the full graph is checked for orphan API routes, duplicate or invalid entity names, route collisions, disconnected nodes, entity-relationship cycles, and unused auth guards.
+- Errors block generation until fixed; warnings can be acknowledged with "Generate anyway".
+
+## Category Box Node
+
+- A resizable, colour-coded background container for visually grouping and labelling sections of the canvas (e.g. "Gateway Layer", "Data Layer").
+- Purely visual — it never participates in edges or code generation, and always renders behind other nodes.
+- Configurable title, colour palette, and width/height from the Properties panel, or by dragging its resize handles directly on the canvas.
+- Used across all bundled architecture templates to pre-organise the layout.
+
 ## Architecture Intelligence Analyzer
 
 - Real-time rule-based static analyzer sidebar calculating an architectural Health Score out of 100.

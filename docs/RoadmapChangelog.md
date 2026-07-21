@@ -62,9 +62,13 @@ The latest release is expanded by default. Click "Show X changes" to expand any 
 
 ---
 
-## Current Status (v0.7.0)
+## Current Status (v0.8.0)
 
 ### Recently Shipped
+- AI Architecture Assistant (Gemini-powered — generate or refine a full architecture from a plain-English prompt)
+- Connection Rectification & Validation Report (live edge validation plus a full pre-generation error/warning report)
+- Category Box Node (resizable, colour-coded background container for grouping canvas sections)
+- Enterprise Code Generator Overhaul (layered config/models/validations/services/controllers/routes/hooks/queues/jobs/webhooks output with auto-provisioned Docker services)
 - Canvas Control Suite & Context Menu (Right-click quick actions and interactive toolbar)
 - Advanced Annotation Nodes (Sticky Notes & lightweight Text Labels)
 - Zone Group Node (Container boundaries for visual swimlanes/clustering)
@@ -82,7 +86,6 @@ The latest release is expanded by default. Click "Show X changes" to expand any 
 
 
 ### In Progress
-- AI Architecture Assistant
 - GitHub Integration
 - Real-Time Collaboration
 

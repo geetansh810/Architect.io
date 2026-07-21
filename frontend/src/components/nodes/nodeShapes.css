@@ -149,7 +149,6 @@
   box-shadow: 6px 12px 28px rgba(0,0,0,0.25);
 }
 
-/* ── Text label node ──────────────────────────────────────────────────────── */
 .text-label-node {
   cursor: grab;
   background: transparent !important;
@@ -157,3 +156,105 @@
   box-shadow: none !important;
 }
 .text-label-node:hover { background: rgba(255,255,255,0.05) !important; border-radius: 6px; }
+
+/* ── Category Box node ────────────────────────────────────────────────────── */
+/* Always behind all nodes and edges */
+.react-flow__node-categoryBox {
+  z-index: -1 !important;
+}
+
+.category-box-node {
+  border-radius: 14px;
+  border: 1.5px solid;
+  cursor: grab;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.category-box-node:active { cursor: grabbing; }
+
+/* ── Title bar ── */
+.category-box-title-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid;
+  background: rgba(0,0,0,0.04);
+  border-radius: 12px 12px 0 0;
+  user-select: none;
+  cursor: grab;
+}
+
+/* ── Colour dot row ── */
+.category-box-color-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.category-box-color-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: transform 0.15s ease, outline 0.15s ease;
+  flex-shrink: 0;
+}
+.category-box-color-dot:hover { transform: scale(1.25); }
+
+/* ── Editable title ── */
+.category-box-title-text {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  cursor: text;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.category-box-title-input {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  background: rgba(0,0,0,0.08);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 1px 6px;
+  outline: none;
+  flex: 1;
+  min-width: 60px;
+}
+
+/* ── Drop hint ── */
+.category-box-hint {
+  position: absolute;
+  inset: 0;
+  top: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.category-box-hint span {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.2;
+}
+
+/* ── React Flow NodeResizer handle override ── */
+.react-flow__node-categoryBox .react-flow__resize-control {
+  z-index: 0;
+}
+

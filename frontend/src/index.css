@@ -5,10 +5,13 @@
 
 @theme {
   --font-sans: "Inter", "Outfit", "Roboto", sans-serif;
+  --font-display: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", monospace;
 
   /* Brand palette */
   --color-brand-50:  #eef2ff;
   --color-brand-100: #e0e7ff;
+  --color-brand-400: #818cf8;
   --color-brand-500: #4f46e5;
   --color-brand-600: #4338ca;
   --color-brand-900: #312e81;
@@ -132,6 +135,62 @@ body {
 }
 
 
+
+/* ── Typography utilities ───────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* ── Blueprint hero (landing page signature) ────────────────────────────────── */
+@keyframes edgeFlow {
+  to { stroke-dashoffset: -14; }
+}
+.blueprint-edge {
+  stroke-dasharray: 7 7;
+  animation: edgeFlow 1.2s linear infinite;
+}
+@keyframes nodeSettle {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.blueprint-node {
+  animation: nodeSettle 0.6s ease both;
+}
+
+/* Subtle engineering-grid backdrop for hero sections */
+.grid-backdrop {
+  background-image:
+    linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 90% 75% at 50% 35%, black 30%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse 90% 75% at 50% 35%, black 30%, transparent 78%);
+  opacity: 0.5;
+}
+
+/* ── Accessibility baseline ─────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blueprint-edge, .blueprint-node { animation: none; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
 
 /* ── Node selection ring pulse ──────────────────────────────────────────────── */
 @keyframes selectionPulse {

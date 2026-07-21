@@ -2,6 +2,26 @@
 
 export const CHANGELOG = [
   {
+    version: 'v0.8.0',
+    date: '2026-07-20',
+    tag: 'major',
+    title: 'AI Architect, Live Connection Rectification & Enterprise Code Generator',
+    summary: 'Gemini-powered AI now designs and refines entire backend architectures from a plain-English prompt. A canonical connection-rule engine validates every edge live on the canvas and produces a full pre-generation report. The code generator was rebuilt into a layered, production-grade Express project structure.',
+    items: [
+      { type: 'new', text: 'AI Architect Modal — describe a backend in plain English and Gemini generates a complete node/edge graph, or refines the architecture already on the canvas' },
+      { type: 'new', text: 'AI "Refine current canvas" mode — extend an existing architecture with a follow-up prompt without losing prior work' },
+      { type: 'new', text: 'Canonical connection-rule matrix (shared by frontend and backend) — defines every valid source→target node pairing and its edge label' },
+      { type: 'new', text: 'Live connection rectification — invalid drags are rejected on the canvas immediately with a toast explaining why (including reversed-direction hints)' },
+      { type: 'new', text: 'Pre-generation Validation Report modal — full-graph check for orphan APIs, duplicate entities, bad identifiers, route collisions, disconnected nodes, entity-relationship cycles, and unprotected auth guards; errors block generation, warnings can be acknowledged' },
+      { type: 'new', text: 'Category Box node — resizable, colour-coded background container for grouping and labelling sections of the canvas, now used across all bundled templates' },
+      { type: 'new', text: 'Backend AI service (Gemini 2.5 Flash) with a `/api/ai/status`, `/api/ai/generate-workflow`, and `/api/ai/refine-workflow` API surface' },
+      { type: 'improved', text: 'Code generator rebuilt into a layered enterprise structure: config, models, validations, services, controllers, routes, hooks, queues, jobs, webhooks' },
+      { type: 'improved', text: 'Generated services now include pagination, filtering, and cache-aware read paths; controllers are thin HTTP layers using asyncHandler/ApiError' },
+      { type: 'improved', text: 'Docker Compose output now provisions Mongo and Redis automatically based on detected node types' },
+      { type: 'improved', text: 'Properties panel supports full Category Box configuration (title, colour, width/height)' },
+    ],
+  },
+  {
     version: 'v0.7.0',
     date: '2026-06-03',
     tag: 'major',

@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Settings, X, AlignLeft, Link2, AlertCircle, Trash2 } from 'lucide-react';
 import { useArchitecture } from '../context/ArchitectureContext';
 import { NODE_SHAPE_CONFIG } from './nodes/nodeShapeConfig';
+import { CATEGORY_BOX_COLORS } from './nodes/CategoryBox';
+
 
 export default function PropertiesPanel() {
   const { nodes, edges, updateNodeData, updateEdgeData, removeElements } = useArchitecture();
@@ -173,6 +175,81 @@ export default function PropertiesPanel() {
             <div className="space-y-1.5">
               <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">URI (Connection String)</label>
               <input type="text" value={data.uri || ''} onChange={e => updateNodeData(node.id, { uri: e.target.value })} className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-xs font-mono text-[var(--text-main)] outline-none focus:border-brand-500" />
+            </div>
+          </>
+        );
+      case 'categoryBox':
+        return (
+          <>
+            {/* Title */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Title</label>
+              <input
+                type="text"
+                value={data.title || 'Category'}
+                onChange={e => updateNodeData(node.id, { title: e.target.value })}
+                placeholder="Group label…"
+                className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-lg px-3 py-2 text-xs text-[var(--text-main)] outline-none focus:border-brand-500 transition-colors"
+              />
+            </div>
+
+            {/* Colour picker */}
+            <div className="space-y-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Colour</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(CATEGORY_BOX_COLORS).map(([key, palette]) => (
+                  <button
+                    key={key}
+                    title={key}
+                    onClick={() => updateNodeData(node.id, { color: key })}
+                    className="w-8 h-8 rounded-lg border-2 transition-all hover:scale-110"
+                    style={{
+                      background: palette.bg,
+                      borderColor: data.color === key ? palette.dot : 'transparent',
+                      boxShadow: data.color === key ? `0 0 0 2px ${palette.dot}` : 'none',
+                    }}
+                  >
+                    <div className="w-full h-full rounded-md" style={{ background: palette.dot, opacity: 0.7 }} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-[9px] text-[var(--text-muted)] capitalize font-bold">
+                Selected: {data.color || 'blue'}
+              </p>
+            </div>
+
+            {/* Dimensions */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">Dimensions</label>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1">
+                  <label className="text-[9px] text-[var(--text-muted)] font-bold">Width (px)</label>
+                  <input
+                    type="number"
+                    min={200}
+                    max={2000}
+                    step={10}
+                    value={data.width || 400}
+                    onChange={e => updateNodeData(node.id, { width: parseInt(e.target.value, 10) || 400 })}
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-brand-500 transition-colors"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] text-[var(--text-muted)] font-bold">Height (px)</label>
+                  <input
+                    type="number"
+                    min={120}
+                    max={2000}
+                    step={10}
+                    value={data.height || 250}
+                    onChange={e => updateNodeData(node.id, { height: parseInt(e.target.value, 10) || 250 })}
+                    className="w-full bg-[var(--bg-app)] border border-[var(--border-main)] rounded-lg px-2 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-brand-500 transition-colors"
+                  />
+                </div>
+              </div>
+              <p className="text-[9px] text-[var(--text-muted)] font-medium">
+                Tip: You can also drag the resize handles on the box
+              </p>
             </div>
           </>
         );

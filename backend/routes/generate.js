@@ -1,101 +1,47 @@
 import express from 'express';
 import archiver from 'archiver';
-import { 
-  generateModel, 
-  generateController, 
-  generateRoutes, 
-  generateAuthMiddleware, 
-  generateAppJs, 
-  generatePackageJson, 
-  generateEnv,
-  generateService,
-  generateMiddleware,
-  generateStorageMiddleware,
-  generateCronJob,
-  generateWebhook
-} from '../templates/generators.js';
+import { buildProjectFiles } from '../templates/generators.js';
+import { validateArchitecture } from '../utils/connectionRules.js';
 
 const router = express.Router();
+
+/**
+ * Server-side rectification gate. The frontend sends the raw canvas graph
+ * alongside the parsed payload; generation is refused (422) while the graph
+ * contains hard errors, so broken wiring can never reach code generation.
+ */
+function checkPayload(payload) {
+  if (!payload.entities || payload.entities.length === 0) {
+    return { errors: [{ code: 'graph/no-entity', message: 'At least one entity is required.' }], warnings: [], valid: false };
+  }
+  if (payload.graph?.nodes) {
+    return validateArchitecture(payload.graph.nodes, payload.graph.edges || []);
+  }
+  return { errors: [], warnings: [], valid: true };
+}
 
 router.post('/', async (req, res) => {
   try {
     const payload = req.body;
-    const { entities, apis, auth, database, middlewares, storage, cronJobs, webhooks, relationships, documentation } = payload;
-    
-    if (!entities || entities.length === 0) {
-      return res.status(400).json({ error: 'At least one entity is required.' });
+    const validation = checkPayload(payload);
+    if (!validation.valid) {
+      return res.status(422).json({
+        error: 'Architecture validation failed — fix the reported issues before generating.',
+        validation,
+      });
     }
 
-    const archive = archiver('zip', {
-      zlib: { level: 9 }
-    });
+    const files = buildProjectFiles(payload);
 
+    const archive = archiver('zip', { zlib: { level: 9 } });
     const zipBuffer = await new Promise((resolve, reject) => {
       const chunks = [];
-      archive.on('data', chunk => chunks.push(chunk));
+      archive.on('data', (chunk) => chunks.push(chunk));
       archive.on('end', () => resolve(Buffer.concat(chunks)));
       archive.on('error', reject);
-
-      let hasAuth = !!auth;
-      const createdServices = new Set();
-
-      // Generate files per entity
-      entities.forEach(entity => {
-        const entityRelationships = (relationships || []).filter(r => r.sourceEntity === entity.name);
-        archive.append(generateModel(entity, entityRelationships), { name: `models/${entity.name}.js` });
-        
-        const api = (apis || []).find(a => a.entityName === entity.name);
-        archive.append(generateController(entity, api || {}, entityRelationships), { name: `controllers/${entity.name}Controller.js` });
-        
-        if (api) {
-          if (api.authEnabled) hasAuth = true;
-          archive.append(generateRoutes(api, entity), { name: `routes/${entity.name}Routes.js` });
-          
-          if (api.logic && api.logic.length > 0) {
-            api.logic.forEach(logicNode => {
-              const serviceName = logicNode.name.replace(/\s+/g, '') + 'Service';
-              if (!createdServices.has(serviceName)) {
-                archive.append(generateService(logicNode), { name: `services/${serviceName}.js` });
-                createdServices.add(serviceName);
-              }
-            });
-          }
-        }
+      Object.entries(files).forEach(([path, content]) => {
+        archive.append(content, { name: path });
       });
-
-      // Generate Middlewares
-      (middlewares || []).forEach((m, i) => {
-        archive.append(generateMiddleware(m), { name: `middlewares/middleware${i}.js` });
-      });
-
-      // Generate Storage
-      (storage || []).forEach((s, i) => {
-        archive.append(generateStorageMiddleware(s), { name: `middlewares/upload${i}.js` });
-      });
-
-      // Generate Cron Jobs
-      (cronJobs || []).forEach((c, i) => {
-        archive.append(generateCronJob(c), { name: `jobs/job${i}.js` });
-      });
-
-      // Generate Webhooks
-      (webhooks || []).forEach((w, i) => {
-        archive.append(generateWebhook(w), { name: `webhooks/webhook${i}.js` });
-      });
-
-      if (hasAuth) {
-        archive.append(generateAuthMiddleware(), { name: 'middlewares/auth.js' });
-      }
-
-      archive.append(generateAppJs(payload), { name: 'app.js' });
-      archive.append(generatePackageJson(payload), { name: 'package.json' });
-      archive.append(generateEnv(database, auth), { name: '.env.example' });
-      archive.append(generateEnv(database, auth), { name: '.env' });
-
-      if (documentation) {
-        archive.append(documentation, { name: 'README.md' });
-      }
-
       archive.finalize();
     });
 
@@ -103,51 +49,30 @@ router.post('/', async (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=generated-backend.zip');
     res.setHeader('Content-Length', zipBuffer.length);
     res.send(zipBuffer);
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// A route just for previewing code
+// Validate without generating — used by the pre-flight check in the builder
+router.post('/validate', (req, res) => {
+  try {
+    const { nodes = [], edges = [] } = req.body || {};
+    res.json(validateArchitecture(nodes, edges));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Preview the generated file map as JSON
 router.post('/preview', (req, res) => {
   try {
     const payload = req.body;
-    const { entities, apis, auth, database, relationships, documentation } = payload;
-    const preview = {};
-
-    entities.forEach(entity => {
-      const entityRelationships = (relationships || []).filter(r => r.sourceEntity === entity.name);
-      preview[`models/${entity.name}.js`] = generateModel(entity, entityRelationships);
-      
-      const api = (apis || []).find(a => a.entityName === entity.name);
-      preview[`controllers/${entity.name}Controller.js`] = generateController(entity, api || {}, entityRelationships);
-      
-      if (api) {
-        preview[`routes/${entity.name}Routes.js`] = generateRoutes(api, entity);
-        
-        if (api.logic && api.logic.length > 0) {
-          api.logic.forEach(logicNode => {
-            const serviceName = logicNode.name.replace(/\s+/g, '') + 'Service';
-            preview[`services/${serviceName}.js`] = generateService(logicNode);
-          });
-        }
-      }
-    });
-    
-    let hasAuth = !!auth || (apis || []).some(a => a.authEnabled);
-    if (hasAuth) {
-      preview['middlewares/auth.js'] = generateAuthMiddleware();
+    const validation = checkPayload(payload);
+    if (!validation.valid) {
+      return res.status(422).json({ error: 'Architecture validation failed.', validation });
     }
-    
-    preview['app.js'] = generateAppJs(payload);
-    preview['package.json'] = generatePackageJson(payload);
-    
-    if (documentation) {
-      preview['README.md'] = documentation;
-    }
-
-    res.json(preview);
+    res.json(buildProjectFiles(payload));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

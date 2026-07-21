@@ -7,6 +7,7 @@ import workflowsRouter from './routes/workflows.js';
 import generateRouter from './routes/generate.js';
 import adminRouter from './routes/admin.js';
 import userRouter from './routes/user.js';
+import aiRouter from './routes/ai.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -31,6 +32,7 @@ app.use('/api/workflows', getRouter(workflowsRouter));
 app.use('/api/generate', getRouter(generateRouter));
 app.use('/api/admin', getRouter(adminRouter));
 app.use('/api/user', getRouter(userRouter));
+app.use('/api/ai', getRouter(aiRouter));
 
 app.get('/', (req, res) => {
   res.send('🚀 Architect.io Backend is running smoothly!');

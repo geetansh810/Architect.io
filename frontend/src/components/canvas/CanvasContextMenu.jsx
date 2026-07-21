@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutTemplate, Maximize2, Copy, ClipboardPaste,
-  MousePointer2, Layers2, StickyNote, Type, Trash2
+  MousePointer2, Layers2, StickyNote, Type, Trash2, SquareDashed
 } from 'lucide-react';
 import { useArchitecture } from '../../context/ArchitectureContext';
 
@@ -82,6 +82,7 @@ export default function CanvasContextMenu({ x, y, isOpen, onClose, onFitView, on
 
           <Divider />
           <MenuSection label="Add Node" />
+          <MenuItem icon={SquareDashed} label="Category Box" onClick={() => action(() => onAddNode?.('categoryBox'))} />
           <MenuItem icon={Layers2} label="Zone Group" onClick={() => action(() => onAddNode?.('zoneGroup'))} />
           <MenuItem icon={StickyNote} label="Sticky Note" onClick={() => action(() => onAddNode?.('stickyNote'))} />
           <MenuItem icon={Type} label="Text Label" onClick={() => action(() => onAddNode?.('textLabel'))} />

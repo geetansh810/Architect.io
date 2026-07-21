@@ -48,9 +48,10 @@ const CATEGORIES = [
   {
     name: 'Annotations',
     color: '#64748b',
-    nodes: ['zoneGroup', 'stickyNote', 'textLabel'],
-    description: 'Labels, notes, and zones',
+    nodes: ['categoryBox', 'zoneGroup', 'stickyNote', 'textLabel'],
+    description: 'Labels, notes, zones and category boxes',
   },
+
 ];
 
 // ── Single Node Card ──────────────────────────────────────────────────────────

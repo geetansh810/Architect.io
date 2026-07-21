@@ -29,6 +29,9 @@ import KeyboardShortcuts from '../components/canvas/KeyboardShortcuts';
 import ShortcutHelpModal from '../components/canvas/ShortcutHelpModal';
 import NodeSearchCommand from '../components/canvas/NodeSearchCommand';
 import ArchitectureIntelligence from '../components/canvas/ArchitectureIntelligence';
+import AIArchitectModal from '../components/AIArchitectModal';
+import ValidationReportModal from '../components/ValidationReportModal';
+import { validateArchitecture, validateConnection } from '../utils/connectionRules';
 import * as htmlToImage from 'html-to-image';
 
 // Node Components — Backend
@@ -59,7 +62,7 @@ import CustomEdge from '../components/edges/CustomEdge';
 import {
   Download, Eye, ChevronLeft, ChevronRight, ArrowLeft,
   Loader2, Code2, X, FileText, Plus, BookOpen,
-  Keyboard, Presentation, Zap, Image, Sun, Moon
+  Keyboard, Presentation, Zap, Image, Sun, Moon, Sparkles
 } from 'lucide-react';
 
 import { useTheme } from '../context/ThemeContext';
@@ -149,6 +152,8 @@ function BuilderCanvas({ workflow, isTemplate }) {
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showIntelligencePanel, setShowIntelligencePanel] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
+  const [validationReport, setValidationReport] = useState(null); // { errors, warnings } | null
   const [presentationMode, setPresentationMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isRenaming, setIsRenaming] = useState(false);
@@ -206,20 +211,21 @@ function BuilderCanvas({ workflow, isTemplate }) {
     } catch (err) { alert('Rename Error: ' + err.message); }
   };
 
-  // ── Code generation ──
-  const handleGenerate = async () => {
+  // ── Code generation (with pre-flight connection rectification) ──
+  const doGenerate = async () => {
     setIsGenerating(true);
     try {
-      const payload = parseToBackendPayload();
-      if (!payload.entities || payload.entities.length === 0) {
-        alert('Add at least one Entity node to generate code.');
-        return;
-      }
+      const payload = { ...parseToBackendPayload(), projectName: workflow.name };
       const res = await api('/generate', { method: 'POST', body: JSON.stringify(payload) });
       if (!res.ok) {
         let errorMsg = 'Generation failed';
         try {
           const d = await res.json();
+          if (d.validation) {
+            // Server-side rectification refused the graph — show the report
+            setValidationReport(d.validation);
+            return;
+          }
           errorMsg = d.error || errorMsg;
         } catch {
           errorMsg = `Server error (${res.status}). Please try again.`;
@@ -233,8 +239,19 @@ function BuilderCanvas({ workflow, isTemplate }) {
       a.download = `${workflow.name.replace(/\s+/g, '-').toLowerCase()}-backend.zip`;
       document.body.appendChild(a); a.click(); a.remove();
       window.URL.revokeObjectURL(url);
+      setValidationReport(null);
     } catch (err) { alert('Code Generation Error: ' + err.message); }
     finally { setIsGenerating(false); }
+  };
+
+  const handleGenerate = () => {
+    // Rectify the graph before any code is generated
+    const validation = validateArchitecture(nodes, edges);
+    if (validation.errors.length > 0 || validation.warnings.length > 0) {
+      setValidationReport(validation);
+      return;
+    }
+    doGenerate();
   };
 
   // ── Export PNG ──
@@ -274,6 +291,13 @@ function BuilderCanvas({ workflow, isTemplate }) {
     if (newId) { setSelectedNodeId(newId); setShowRightSidebar(true); }
   }, [addNode, screenToFlowPosition]);
 
+  // ── Live connection rectification (dims invalid drop targets while dragging) ──
+  const isValidConnection = useCallback((connection) => {
+    const src = nodes.find(n => n.id === connection.source);
+    const tgt = nodes.find(n => n.id === connection.target);
+    return validateConnection(src, tgt, edges).valid;
+  }, [nodes, edges]);
+
   const gridCfg = GRID_CONFIG[gridMode];
   const snapGrid = snapEnabled ? [20, 20] : undefined;
 
@@ -297,8 +321,8 @@ function BuilderCanvas({ workflow, isTemplate }) {
 
       {/* ── Top Navigation Bar ── */}
       {!presentationMode && (
-        <header className="h-14 shrink-0 border-b border-[var(--border-main)] bg-[var(--bg-surface)] flex items-center justify-between px-4 z-50">
-          <div className="flex items-center gap-3">
+        <header className="h-14 shrink-0 border-b border-[var(--border-main)] bg-[var(--bg-surface)] flex items-center justify-between gap-3 px-4 z-50">
+          <div className="flex items-center gap-3 min-w-0 shrink">
             <button
               onClick={() => {
                 if (location.state?.from) navigate(location.state.from);
@@ -328,11 +352,11 @@ function BuilderCanvas({ workflow, isTemplate }) {
             )}
           </div>
           
-          <div className="flex items-center gap-2">
-            <motion.button 
-              whileHover={{ scale: 1.05 }} 
-              whileTap={{ scale: 0.95 }} 
-              onClick={toggleCanvasTheme} 
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 max-w-[75vw] [&>*]:shrink-0 [&_button]:whitespace-nowrap">
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleCanvasTheme}
               title={canvasTheme === 'dark' ? 'Switch Canvas to Light Mode' : 'Switch Canvas to Dark Mode'} 
               className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors"
             >
@@ -343,6 +367,9 @@ function BuilderCanvas({ workflow, isTemplate }) {
             </motion.button>
             {!isTemplate && (
               <>
+                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowAIModal(true)} title="AI Architect — generate a workflow from a prompt" className="bg-violet-500/10 border border-violet-500/30 hover:border-violet-500 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 text-violet-500 transition-colors">
+                  <Sparkles size={15} /> AI Architect
+                </motion.button>
                 <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleExportImage} disabled={isExporting} title="Export as PNG" className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors">
                   {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Image size={15} />}
                 </motion.button>
@@ -458,6 +485,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
           onNodesDelete={onNodesDelete}
           onNodeDragStop={onNodeDragStop}
           onConnect={onConnect}
+          isValidConnection={isValidConnection}
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
           onPaneContextMenu={onPaneContextMenu}
@@ -560,6 +588,18 @@ function BuilderCanvas({ workflow, isTemplate }) {
 
       {/* ── Intelligence Layer Overlay ── */}
       <ArchitectureIntelligence isOpen={showIntelligencePanel} onClose={() => setShowIntelligencePanel(false)} />
+
+      {/* ── AI Architect ── */}
+      <AIArchitectModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} />
+
+      {/* ── Pre-generation validation report ── */}
+      <ValidationReportModal
+        isOpen={!!validationReport}
+        onClose={() => setValidationReport(null)}
+        validation={validationReport}
+        onProceed={doGenerate}
+        isGenerating={isGenerating}
+      />
 
       {/* ── Preview Modal ── */}
       <AnimatePresence>

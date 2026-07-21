@@ -37,7 +37,7 @@ export default function Navbar({ user, onLogout }) {
   const navItemsPrivate = [
     { name: 'Projects', icon: LayoutDashboard, path: '/dashboard?tab=Projects' },
     { name: 'Templates', icon: Layers, path: '/templates' },
-    { name: 'AI Builder', icon: Sparkles, path: '/dashboard?tab=AI Builder', badge: 'Soon' },
+    { name: 'AI Builder', icon: Sparkles, path: '/dashboard?tab=AI Builder', badge: 'New' },
     { name: 'Documentation', icon: BookOpen, path: '/dashboard?tab=Documentation' },
   ];
 
@@ -54,7 +54,7 @@ export default function Navbar({ user, onLogout }) {
               <div className="w-10 h-10 bg-brand-500 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-500/20 group-hover:scale-110 transition-transform">
                 <Box className="text-white w-6 h-6" />
               </div>
-              <span className="text-xl font-black tracking-tighter">Architect.io</span>
+              <span className="font-display text-xl font-bold">Architect.io</span>
             </Link>
 
             <nav className="hidden md:flex items-center gap-1">
@@ -96,7 +96,7 @@ export default function Navbar({ user, onLogout }) {
                   <a href="/#ai-builder" className="flex items-center gap-1.5 text-sm font-bold text-violet-500 hover:text-violet-400 transition-colors">
                     <Sparkles size={14} />
                     AI Builder
-                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-violet-500/15 text-violet-400 rounded-md leading-none">Soon</span>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-emerald-500/15 text-emerald-500 rounded-md leading-none">Live</span>
                   </a>
                 </div>
               )}

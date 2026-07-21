@@ -38,6 +38,36 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e-ord-queue', source: 't1-orders', target: 't1-queue', data: { protocol: 'pub/sub', isAsync: true, label: 'Publish' } },
       { id: 'e-queue-notif', source: 't1-queue', target: 't1-notif', data: { protocol: 'pub/sub', isAsync: true, label: 'Consume' } },
     ],
+    categoryBoxes: [
+      {
+        id: 'cb-t1-gateway',
+        title: 'Gateway Layer',
+        color: 'blue',
+        position: { x: 420, y: -60 },
+        dimensions: { width: 380, height: 620 },
+      },
+      {
+        id: 'cb-t1-application',
+        title: 'Application Layer',
+        color: 'purple',
+        position: { x: -180, y: 700 },
+        dimensions: { width: 1580, height: 180 },
+      },
+      {
+        id: 'cb-t1-data',
+        title: 'Data Layer',
+        color: 'green',
+        position: { x: 80, y: 1020 },
+        dimensions: { width: 1280, height: 200 },
+      },
+      {
+        id: 'cb-t1-messaging',
+        title: 'Messaging & Workers',
+        color: 'orange',
+        position: { x: 620, y: 1340 },
+        dimensions: { width: 380, height: 460 },
+      },
+    ],
   },
 
   {
@@ -73,6 +103,36 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e8', source: 't2-billing', target: 't2-stripe', data: { protocol: 'REST', isAsync: true, label: 'Webhooks' } },
       { id: 'e9', source: 't2-auth', target: 't2-email', data: { protocol: 'REST', isAsync: true, label: 'OTP / Welcome' } },
     ],
+    categoryBoxes: [
+      {
+        id: 'cb-t2-gateway',
+        title: 'API Gateway',
+        color: 'blue',
+        position: { x: 260, y: 0 },
+        dimensions: { width: 380, height: 140 },
+      },
+      {
+        id: 'cb-t2-application',
+        title: 'Application Layer',
+        color: 'purple',
+        position: { x: -140, y: 280 },
+        dimensions: { width: 1040, height: 220 },
+      },
+      {
+        id: 'cb-t2-external',
+        title: 'External Services',
+        color: 'orange',
+        position: { x: 1060, y: 280 },
+        dimensions: { width: 320, height: 500 },
+      },
+      {
+        id: 'cb-t2-data',
+        title: 'Data Layer',
+        color: 'green',
+        position: { x: -80, y: 920 },
+        dimensions: { width: 1200, height: 200 },
+      },
+    ],
   },
 
   {
@@ -104,6 +164,36 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e6', source: 't3-ws1', target: 't3-redis-presence', data: { protocol: 'Redis', label: 'Presence' } },
       { id: 'e7', source: 't3-ws1', target: 't3-auth', data: { protocol: 'Internal', label: 'Verify JWT' } },
       { id: 'e8', source: 't3-redis-pubsub', target: 't3-notif', data: { protocol: 'pub/sub', isAsync: true, label: 'Offline Push' } },
+    ],
+    categoryBoxes: [
+      {
+        id: 'cb-t3-gateway',
+        title: 'Load Balancer',
+        color: 'blue',
+        position: { x: 260, y: 0 },
+        dimensions: { width: 380, height: 140 },
+      },
+      {
+        id: 'cb-t3-websockets',
+        title: 'WebSocket Servers',
+        color: 'purple',
+        position: { x: -80, y: 310 },
+        dimensions: { width: 880, height: 180 },
+      },
+      {
+        id: 'cb-t3-cache',
+        title: 'Redis Cache Layer',
+        color: 'red',
+        position: { x: 240, y: 630 },
+        dimensions: { width: 800, height: 180 },
+      },
+      {
+        id: 'cb-t3-data',
+        title: 'Persistence & Auth',
+        color: 'green',
+        position: { x: -200, y: 950 },
+        dimensions: { width: 1260, height: 190 },
+      },
     ],
   },
 
@@ -139,6 +229,36 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e8', source: 't4-kafka2', target: 't4-redis', data: { protocol: 'Redis', isAsync: true } },
       { id: 'e9', source: 't4-analytics', target: 't4-pg', data: { protocol: 'DB' } },
     ],
+    categoryBoxes: [
+      {
+        id: 'cb-t4-ingestion',
+        title: 'Data Ingestion',
+        color: 'blue',
+        position: { x: 260, y: 0 },
+        dimensions: { width: 380, height: 140 },
+      },
+      {
+        id: 'cb-t4-streaming',
+        title: 'Event Streaming (Kafka)',
+        color: 'orange',
+        position: { x: 260, y: 280 },
+        dimensions: { width: 380, height: 140 },
+      },
+      {
+        id: 'cb-t4-workers',
+        title: 'Processing Workers',
+        color: 'purple',
+        position: { x: -80, y: 600 },
+        dimensions: { width: 880, height: 200 },
+      },
+      {
+        id: 'cb-t4-output',
+        title: 'Data Warehouse & Cache',
+        color: 'green',
+        position: { x: -80, y: 1240 },
+        dimensions: { width: 1000, height: 200 },
+      },
+    ],
   },
 
   {
@@ -167,6 +287,43 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e4', source: 't5-api-lambda', target: 't5-s3', data: { protocol: 'REST', label: 'Upload' } },
       { id: 'e5', source: 't5-api-lambda', target: 't5-cloudwatch', data: { protocol: 'Internal', isAsync: true, label: 'Logs' } },
       { id: 'e6', source: 't5-api-lambda', target: 't5-sqs', data: { protocol: 'pub/sub', isAsync: true, label: 'Enqueue' } },
+    ],
+    categoryBoxes: [
+      {
+        id: 'cb-t5-gateway',
+        title: 'AWS API Gateway',
+        color: 'blue',
+        position: { x: 260, y: 0 },
+        dimensions: { width: 380, height: 140 },
+      },
+      {
+        id: 'cb-t5-lambda',
+        title: 'Lambda Functions',
+        color: 'amber',
+        position: { x: -160, y: 310 },
+        dimensions: { width: 820, height: 180 },
+      },
+      {
+        id: 'cb-t5-observability',
+        title: 'Observability',
+        color: 'slate',
+        position: { x: 1040, y: 310 },
+        dimensions: { width: 320, height: 180 },
+      },
+      {
+        id: 'cb-t5-storage',
+        title: 'Storage Layer',
+        color: 'green',
+        position: { x: 80, y: 660 },
+        dimensions: { width: 960, height: 200 },
+      },
+      {
+        id: 'cb-t5-messaging',
+        title: 'Async Job Queue',
+        color: 'orange',
+        position: { x: 400, y: 980 },
+        dimensions: { width: 380, height: 160 },
+      },
     ],
   },
 
@@ -221,7 +378,45 @@ export const ARCHITECTURE_TEMPLATES = [
       { id: 'e-db-replica', source: 't4-db-primary', target: 't4-db-replica', data: { protocol: 'DB', isAsync: true, label: 'Replicate' } },
       { id: 'e-analytics-db', source: 't4-api-analytics', target: 't4-db-analytics', data: { protocol: 'DB', label: 'Query Clicks' } }
     ],
+    categoryBoxes: [
+      {
+        id: 'cb-url-gateway',
+        title: 'Edge & Gateway Layer',
+        color: 'blue',
+        position: { x: 300, y: 20 },
+        dimensions: { width: 400, height: 540 },
+      },
+      {
+        id: 'cb-url-security',
+        title: 'Security & Rate Limiting',
+        color: 'red',
+        position: { x: -100, y: 590 },
+        dimensions: { width: 580, height: 170 },
+      },
+      {
+        id: 'cb-url-api',
+        title: 'API Endpoints',
+        color: 'purple',
+        position: { x: -100, y: 780 },
+        dimensions: { width: 1100, height: 180 },
+      },
+      {
+        id: 'cb-url-data',
+        title: 'Data Models & Cache',
+        color: 'green',
+        position: { x: -160, y: 980 },
+        dimensions: { width: 1300, height: 650 },
+      },
+      {
+        id: 'cb-url-analytics',
+        title: 'Analytics Pipeline',
+        color: 'orange',
+        position: { x: 800, y: 1220 },
+        dimensions: { width: 340, height: 900 },
+      },
+    ],
     documentation: `# System Design: High-Scale URL Shortener (e.g., bit.ly / tinyurl)
+
 
 This document provides an end-to-end, production-grade architectural guide and study reference for designing a highly scalable, low-latency URL Shortener system. It is designed to handle **10,000+ write requests/second** and **100,000+ read (redirection) requests/second** with under **100ms** latency.
 
