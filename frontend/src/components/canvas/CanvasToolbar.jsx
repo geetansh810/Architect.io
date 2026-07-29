@@ -5,14 +5,14 @@ import {
   ZoomIn, ZoomOut, Maximize2, LayoutTemplate,
   Grid3X3, Magnet, AlignLeft, AlignRight, AlignCenterHorizontal,
   AlignStartVertical, AlignEndVertical, AlignCenterVertical,
-  AlignJustify, Rows3, Undo2, Redo2, ChevronDown
+  AlignJustify, Rows3, Undo2, Redo2, ChevronDown, Map
 } from 'lucide-react';
 import { useArchitecture } from '../../context/ArchitectureContext';
 
 const GRID_MODES = ['dots', 'lines', 'cross', 'none'];
 const GRID_LABELS = { dots: 'Dots', lines: 'Lines', cross: 'Cross', none: 'None' };
 
-export default function CanvasToolbar({ gridMode, onGridModeChange, snapEnabled, onSnapToggle }) {
+export default function CanvasToolbar({ gridMode, onGridModeChange, snapEnabled, onSnapToggle, miniMapOpen, onMiniMapToggle }) {
   const { fitView, zoomIn, zoomOut } = useReactFlow();
   const { zoom } = useViewport();
   const { undo, redo, canUndo, canRedo, autoLayout, alignNodes, distributeNodes } = useArchitecture();
@@ -68,6 +68,7 @@ export default function CanvasToolbar({ gridMode, onGridModeChange, snapEnabled,
       </span>
       <ToolBtn onClick={handleZoomIn} icon={ZoomIn} title="Zoom In (+)" />
       <ToolBtn onClick={handleFitView} icon={Maximize2} title="Fit View (Ctrl+0)" />
+      <ToolBtn onClick={onMiniMapToggle} icon={Map} title="Toggle Minimap" active={miniMapOpen} />
 
       <Divider />
 

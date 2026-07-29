@@ -17,5 +17,11 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // caughtErrors: 'none' preserves js.configs.recommended's plain "error"
+      // behavior (which doesn't flag unused catch bindings) — only adding
+      // the underscore-prefix exemption on top of it, not new coverage.
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrors: 'none' }],
+    },
   },
 ])

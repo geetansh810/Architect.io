@@ -10,6 +10,7 @@ const MW_COLORS = {
   'Custom': 'text-slate-400',
 };
 
+// See LogicNode — ShapeWrapper owns the visuals; children here are dropped.
 export default function MiddlewareNode({ data, selected }) {
   return (
     <ShapeWrapper nodeType="middlewareNode" selected={selected} data={data}>

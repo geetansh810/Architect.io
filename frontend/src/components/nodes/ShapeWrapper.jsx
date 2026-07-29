@@ -220,6 +220,13 @@ export default function ShapeWrapper({ nodeType, selected, children, data }) {
   const IconComponent = config.icon;
   const detailText = typeof config.detail === 'function' ? config.detail(data) : config.detail;
   const providerText = typeof config.provider === 'function' ? config.provider(data) : config.provider;
+  // ShapeWrapper renders its own card from CATEGORY_MAP and ignores the
+  // per-node component's children (only Handles get through partitionChildren),
+  // so a node's code line-count badge has to live here to actually be visible.
+  // Guarded to logicNode / Custom middlewareNode so switching a middleware
+  // node away from "Custom" doesn't keep showing a stale code badge.
+  const showsCode = nodeType === 'logicNode' || (nodeType === 'middlewareNode' && data?.middlewareType === 'Custom');
+  const codeLineCount = showsCode && data?.code?.trim() ? data.code.trim().split('\n').length : 0;
 
   // Determine completeness status
   const status = (() => {
@@ -284,6 +291,11 @@ export default function ShapeWrapper({ nodeType, selected, children, data }) {
           <span className="text-[10px] text-[var(--text-muted)] mt-0.5 truncate font-medium">
             {providerText}
           </span>
+          {codeLineCount > 0 && (
+            <span className="text-[9px] font-mono font-bold text-emerald-500 bg-emerald-500/10 rounded px-1.5 py-0.5 mt-1 self-start">
+              ⚡ {codeLineCount} {codeLineCount === 1 ? 'line' : 'lines'}
+            </span>
+          )}
         </div>
       </div>
 

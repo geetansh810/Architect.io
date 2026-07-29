@@ -25,7 +25,7 @@ const languageOf = (path) => {
 
 export default function CodePreview({ nodes, edges }) {
   const { theme } = useTheme();
-  const { showToast, documentation, parseToBackendPayload } = useArchitecture();
+  const { showToast, documentation, parseToBackendPayload, projectConfig } = useArchitecture();
   const [activeFormat, setActiveFormat] = useState('express');
   const [activeFile, setActiveFile] = useState(0);
   const [serverFiles, setServerFiles] = useState(null);
@@ -55,8 +55,8 @@ export default function CodePreview({ nodes, edges }) {
   }, [nodes, edges, documentation]);
 
   const localFiles = useMemo(
-    () => generateCode(nodes, edges, activeFormat, documentation),
-    [nodes, edges, activeFormat, documentation]
+    () => generateCode(nodes, edges, activeFormat, documentation, projectConfig),
+    [nodes, edges, activeFormat, documentation, projectConfig]
   );
 
   const generatedFiles = activeFormat === 'express' && serverFiles ? serverFiles : localFiles;

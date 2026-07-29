@@ -8,6 +8,9 @@ const HOOK_COLORS = {
   'before-delete': 'text-red-400',  'after-delete': 'text-rose-400',
 };
 
+// Visuals (including the code line-count badge) live in ShapeWrapper — it
+// renders its own card from CATEGORY_MAP and drops everything here except
+// Handles, so anything added below this line is invisible.
 export default function LogicNode({ data, selected }) {
   return (
     <ShapeWrapper nodeType="logicNode" selected={selected} data={data}>

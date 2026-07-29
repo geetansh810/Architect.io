@@ -247,51 +247,73 @@ const sections = [
   },
   {
     id: 'code-preview',
-    title: 'Code Preview & Export',
+    title: 'Code Workspace & Export',
     icon: Code2,
     content: (
       <div className="space-y-8">
-        <p className="text-lg text-[var(--text-muted)]">The code preview panel generates output that reflects your actual architecture — route files, models, consumers, and configs per node.</p>
+        <p className="text-lg text-[var(--text-muted)]">The builder has two view modes. <strong className="text-[var(--text-main)]">Design</strong> is the canvas on its own; <strong className="text-[var(--text-main)]">Code</strong> splits the workspace — generated project on the left, canvas on the right — so you can watch the project rewrite itself as you wire nodes together. The canvas re-centres itself in whatever space it has, so the diagram stays framed either way. Press <code className="px-2 py-0.5 bg-[var(--bg-app)] rounded text-xs">Ctrl/Cmd + E</code> to toggle.</p>
+
         <div className="space-y-6">
           <div className="flex gap-6">
             <div className="w-12 h-12 rounded-xl bg-brand-500/10 text-brand-500 flex items-center justify-center shrink-0">
               <Code2 size={24} />
             </div>
             <div>
-              <h4 className="font-bold text-xl mb-1">Express.js Code Generation</h4>
-              <p className="text-[var(--text-muted)]">Per-node file generation: routes, controllers, models, and services. Clean MVC architecture with proper separation of concerns.</p>
+              <h4 className="font-bold text-xl mb-1">Real Editor, Real Project</h4>
+              <p className="text-[var(--text-muted)]">The code pane is a full Monaco editor (the one that powers VS Code) with syntax highlighting, folding, and a collapsible file explorer over the whole generated tree — not a snippet box.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0">
+              <Layers size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Nodes and Files Are Linked</h4>
+              <p className="text-[var(--text-muted)]">Click a node on the canvas and the editor jumps to the file it produced — an Entity opens its module, an API its routes and controller, a Database its connection config, an Auth node its middleware. The crosshair button in the editor does the reverse, selecting the node that owns the open file.</p>
+            </div>
+          </div>
+          <div className="flex gap-6">
+            <div className="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+              <Terminal size={24} />
+            </div>
+            <div>
+              <h4 className="font-bold text-xl mb-1">Write Your Own Logic</h4>
+              <p className="text-[var(--text-muted)]">Generated files are read-only because they are derived from the graph — with two exceptions. Select a <strong className="text-[var(--text-main)]">Logic Hook</strong> or a <strong className="text-[var(--text-main)]">Custom Middleware</strong> node and the pane becomes editable, bound to that node&apos;s own code. Hook bodies are emitted verbatim into the entity&apos;s <code className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded text-xs">hooks</code> file, and your code is saved with the architecture.</p>
             </div>
           </div>
           <div className="flex gap-6">
             <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
-              <Terminal size={24} />
+              <CheckCircle2 size={24} />
             </div>
             <div>
-              <h4 className="font-bold text-xl mb-1">Multi-Format Output</h4>
-              <p className="text-[var(--text-muted)]">Generate Docker Compose files, .env templates, architecture README documentation, and Mermaid diagrams alongside your Express.js code.</p>
+              <h4 className="font-bold text-xl mb-1">Project Config</h4>
+              <p className="text-[var(--text-muted)]">Choose <strong className="text-[var(--text-main)]">JavaScript or TypeScript</strong>, <strong className="text-[var(--text-main)]">Zod or Joi</strong> for request validation, whether to emit a Swagger/OpenAPI document at <code className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded text-xs">/api-docs</code>, and whether routes mount under <code className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded text-xs">/api</code> or <code className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded text-xs">/api/v1</code>. The whole project re-emits instantly, and the settings save with your architecture.</p>
             </div>
           </div>
         </div>
 
-        <div className="bg-[var(--bg-app)] border border-[var(--border-main)] rounded-2xl p-6 font-mono text-sm">
-          <div className="text-emerald-500 mb-3">// Exported Project Structure</div>
-          <div className="space-y-1 text-[var(--text-muted)]">
-            <div>/generated-backend</div>
-            <div>├── /controllers</div>
-            <div>├── /models</div>
-            <div>├── /routes</div>
-            <div>├── /services</div>
-            <div>├── /middlewares</div>
-            <div>├── app.js</div>
-            <div>├── docker-compose.yml</div>
-            <div>├── package.json</div>
-            <div>├── README.md</div>
-            <div>└── .env.example</div>
+        <div className="bg-[var(--bg-app)] border border-[var(--border-main)] rounded-2xl p-6 font-mono text-sm overflow-x-auto">
+          <div className="text-emerald-500 mb-3">// Generated project — layered, one module per entity</div>
+          <div className="space-y-1 text-[var(--text-muted)] whitespace-pre">
+            <div>src/</div>
+            <div>├── config/      <span className="text-[var(--text-main)]/50">env validation, database, redis, swagger</span></div>
+            <div>├── core/        <span className="text-[var(--text-main)]/50">AppError, asyncHandler, ApiResponse, logger, pagination</span></div>
+            <div>├── middleware/  <span className="text-[var(--text-main)]/50">errorHandler, validate, auth, authorize, rateLimiter</span></div>
+            <div>├── modules/</div>
+            <div>│   └── user/    <span className="text-[var(--text-main)]/50">model · repository · hooks · service · controller · validation · routes</span></div>
+            <div>├── events/      <span className="text-[var(--text-main)]/50">EventBus for async side effects</span></div>
+            <div>└── server.js</div>
+            <div className="pt-2">tests/ · Dockerfile · docker-compose.yml · .env.example · README.md</div>
           </div>
         </div>
 
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {['Live code preview as you build', 'File tree sidebar navigation', 'Copy & Download buttons', 'Syntax-highlighted output'].map(f => (
+          {[
+            'Regenerates live as you edit the canvas',
+            'Drag the divider to resize; double-click to even out',
+            'Copy any file straight from the editor',
+            'Download the whole project as a ZIP',
+          ].map(f => (
             <li key={f} className="flex items-center gap-2 text-sm font-bold">
               <CheckCircle2 size={16} className="text-brand-500" /> {f}
             </li>
@@ -453,6 +475,10 @@ const sections = [
               <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
                 <span className="text-[var(--text-muted)]">Presentation Mode</span>
                 <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">F5 / Ctrl+Shift+P</kbd>
+              </div>
+              <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
+                <span className="text-[var(--text-muted)]">Toggle Design / Code</span>
+                <kbd className="px-1.5 py-0.5 bg-[var(--bg-app)] rounded font-mono font-black border border-[var(--border-main)] text-[10px]">Ctrl/Cmd + E</kbd>
               </div>
               <div className="flex justify-between border-b border-[var(--border-main)]/50 pb-1.5">
                 <span className="text-[var(--text-muted)]">Toggle Shortcuts Panel</span>

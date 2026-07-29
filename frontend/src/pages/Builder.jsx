@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../utils/api.js';
 import { templates } from '../utils/templates.js';
@@ -7,21 +7,22 @@ import {
   ReactFlow,
   ReactFlowProvider,
   Background,
-  BackgroundVariant,
-  Controls,
   MiniMap,
-  Panel,
-  useReactFlow
+  useReactFlow,
+  useStoreApi
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { ArchitectureProvider, useArchitecture } from '../context/ArchitectureContext';
-import NodeSidebar from '../components/NodeSidebar';
+import NodePalette from '../components/canvas/NodePalette';
+import BuilderHeader from '../components/canvas/BuilderHeader';
 import PropertiesPanel from '../components/PropertiesPanel';
 import RelationshipModal from '../components/RelationshipModal';
 import NodeToolbarWrapper from '../components/NodeToolbarWrapper';
-import CodePreview from '../components/CodePreview';
+import CodeEditorPanel from '../components/CodeEditorPanel';
+import ProjectConfigPanel from '../components/ProjectConfigPanel';
+import { buildProjectFiles, getPrimaryFileForNode, getNodeForFile } from '../utils/codeSync';
 import { DocumentationPanel } from '../components/DocumentationPanel';
 import CanvasToolbar from '../components/canvas/CanvasToolbar';
 import CanvasContextMenu from '../components/canvas/CanvasContextMenu';
@@ -59,13 +60,8 @@ import CategoryBox from '../components/nodes/CategoryBox';
 
 import CustomEdge from '../components/edges/CustomEdge';
 
-import {
-  Download, Eye, ChevronLeft, ChevronRight, ArrowLeft,
-  Loader2, Code2, X, FileText, Plus, BookOpen,
-  Keyboard, Presentation, Zap, Image, Sun, Moon, Sparkles
-} from 'lucide-react';
+import { Loader2, X, FileText, BookOpen, Pin } from 'lucide-react';
 
-import { useTheme } from '../context/ThemeContext';
 import { startBuilderTour } from '../utils/tour';
 
 // ── Node type registrations ───────────────────────────────────────────────────
@@ -106,6 +102,17 @@ const edgeTypes = {
   custom: CustomEdge,
 };
 
+// ── Design ↔ Code transition ─────────────────────────────────────────────────
+// One duration and one curve, shared by the sliding editor group and the
+// canvas's width. They have to match exactly: the editor's right edge and the
+// canvas's left edge are the same seam, and any drift between the two curves
+// shows up as a gap tearing open mid-animation.
+//
+// The curve is a decelerating ease — fast to commit, soft to settle — which
+// reads as the panel arriving rather than being dragged into place.
+const PANE_MS = 340;
+const PANE_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+
 // ── Grid background config by mode ───────────────────────────────────────────
 const GRID_CONFIG = {
   dots:  { variant: 'dots',   gap: 24, size: 1.5,  lightColor: '#cbd5e1', darkColor: '#3f3f46' },
@@ -114,20 +121,53 @@ const GRID_CONFIG = {
   none:  { variant: null },
 };
 
+/**
+ * Bounding box of every node, in flow coordinates.
+ *
+ * Takes React Flow's *internal* nodes (from the store's `nodeLookup`) rather
+ * than the plain nodes in context: those carry `measured` sizes and
+ * `internals.positionAbsolute`, which is what the renderer actually draws
+ * against. Measuring the plain nodes means guessing sizes for anything not
+ * yet laid out, and a guess that's wrong by a couple of hundred pixels puts
+ * the "centre" visibly off-centre.
+ */
+function measureNodeBounds(internalNodes) {
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  let seen = 0;
+
+  internalNodes.forEach((n) => {
+    const pos = n.internals?.positionAbsolute ?? n.position;
+    if (!pos) return;
+    const w = n.measured?.width ?? n.width ?? n.data?.width;
+    const h = n.measured?.height ?? n.height ?? n.data?.height;
+    // Unmeasured nodes contribute their origin only — better to under-reach
+    // than to pad the box with a made-up size and skew the centre.
+    seen += 1;
+    minX = Math.min(minX, pos.x);
+    minY = Math.min(minY, pos.y);
+    maxX = Math.max(maxX, pos.x + (w || 0));
+    maxY = Math.max(maxY, pos.y + (h || 0));
+  });
+
+  if (!seen) return null;
+  const width = Math.max(maxX - minX, 1);
+  const height = Math.max(maxY - minY, 1);
+  return { centerX: minX + width / 2, centerY: minY + height / 2, width, height };
+}
+
 // ── Canvas Component ──────────────────────────────────────────────────────────
 function BuilderCanvas({ workflow, isTemplate }) {
   const {
     nodes, edges, onNodesChange, onEdgesChange, onConnect,
     addNode, parseToBackendPayload, pendingConnection, setPendingConnection,
     confirmConnection, documentation, setDocumentation, onNodesDelete, toastMessage,
-    undo, redo, canUndo, canRedo, onNodeDragStop,
+    onNodeDragStop, updateNodeData, projectConfig, showToast,
   } = useArchitecture();
 
-  const { id, slug } = useParams();
-  const { theme, toggleTheme } = useTheme();
+  const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { screenToFlowPosition, fitView, zoomIn, zoomOut } = useReactFlow();
+  const { screenToFlowPosition, fitView, zoomIn, zoomOut, setCenter, setViewport } = useReactFlow();
 
   // Local canvas theme state (decoupled from platform theme)
   const [canvasTheme, setCanvasTheme] = useState(() => {
@@ -144,15 +184,22 @@ function BuilderCanvas({ workflow, isTemplate }) {
   };
 
   // ── UI state ──
-  const [selectedNodeId, setSelectedNodeId] = useState(null);
-  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
-  const [showRightSidebar, setShowRightSidebar] = useState(true);
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  // Selection lives on the nodes/edges themselves (React Flow owns it), so the
+  // inspector's visibility is derived rather than tracked in a second place —
+  // that's what keeps it in sync with box-select, delete, and undo.
+  const [pendingSelectId, setPendingSelectId] = useState(null);
+  const [inspectorPinned, setInspectorPinned] = useState(
+    () => localStorage.getItem('architect_inspector_pinned') === '1'
+  );
+  const [showMiniMap, setShowMiniMap] = useState(
+    () => localStorage.getItem('architect_minimap') !== '0'
+  );
   const [showReadmeModal, setShowReadmeModal] = useState(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState(false);
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [showIntelligencePanel, setShowIntelligencePanel] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [showConfigModal, setShowConfigModal] = useState(false);
   const [validationReport, setValidationReport] = useState(null); // { errors, warnings } | null
   const [presentationMode, setPresentationMode] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -165,14 +212,246 @@ function BuilderCanvas({ workflow, isTemplate }) {
   const [snapEnabled, setSnapEnabled] = useState(false);
   const [contextMenu, setContextMenu] = useState({ open: false, x: 0, y: 0 });
 
-  // ── Node click ──
-  const onNodeClick = useCallback((_, node) => {
-    setSelectedNodeId(node.id);
-    setShowRightSidebar(true);
+  // ── Editor ↔ Canvas split view ──
+  // Two modes only. 'code' *is* the split: code left, canvas right. There is
+  // no code-only mode — hiding the canvas hid the thing the code describes.
+  const [viewMode, setViewMode] = useState('canvas'); // 'canvas' | 'code'
+  // The *code* pane's share of the split — it's the left pane, so this is
+  // measured from the left edge and the divider maths reads directly.
+  // Even by default: at 60/40 on a 1280px screen the code column lands under
+  // 300px, which is narrower than the lines in it.
+  // Key is versioned because the stored number used to mean the canvas share;
+  // reading an old value under the new meaning would silently flip a user's
+  // saved layout.
+  const [splitRatio, setSplitRatio] = useState(() => {
+    const saved = parseFloat(localStorage.getItem('architect_split_ratio_v2'));
+    return Number.isFinite(saved) && saved >= 0.2 && saved <= 0.8 ? saved : 0.5;
+  });
+  const [activeFilePath, setActiveFilePath] = useState(null);
+  const [editingNodeId, setEditingNodeId] = useState(null);
+  const [isDraggingDivider, setIsDraggingDivider] = useState(false);
+  const workspaceRef = useRef(null);
+  const canvasPaneRef = useRef(null);
+  const editingNode = editingNodeId ? nodes.find((n) => n.id === editingNodeId) : null;
+
+  // ── Derived layout ──
+  // Each mode decides what's mounted around the workspace, so the code editor
+  // no longer sits squeezed between a node palette and an inspector that have
+  // nothing to act on.
+  const isSplit          = viewMode === 'code';
+  const showPalette      = !isTemplate && !presentationMode;
+  const inspectorMounted = !isTemplate && !presentationMode;
+  const hasSelection     = nodes.some((n) => n.selected) || edges.some((e) => e.selected);
+  const showInspector    = inspectorMounted && (hasSelection || inspectorPinned);
+  // Split has no room for a 320px dock, so the inspector floats over the
+  // canvas — which is the right-hand pane, the same edge it docks to.
+  const inspectorFloats = isSplit;
+
+  useEffect(() => {
+    localStorage.setItem('architect_inspector_pinned', inspectorPinned ? '1' : '0');
+  }, [inspectorPinned]);
+
+  useEffect(() => {
+    localStorage.setItem('architect_minimap', showMiniMap ? '1' : '0');
+  }, [showMiniMap]);
+
+  useEffect(() => {
+    localStorage.setItem('architect_split_ratio_v2', String(splitRatio));
+  }, [splitRatio]);
+
+  // Newly added nodes aren't selected by addNode, and their id isn't in `nodes`
+  // until the next render — so selection is deferred a tick rather than fired
+  // against a stale list.
+  const appliedSelectRef = useRef(null);
+  useEffect(() => {
+    if (!pendingSelectId || appliedSelectRef.current === pendingSelectId) return;
+    if (!nodes.some((n) => n.id === pendingSelectId)) return;
+    appliedSelectRef.current = pendingSelectId;
+    onNodesChange(nodes.map((n) => ({ id: n.id, type: 'select', selected: n.id === pendingSelectId })));
+  }, [pendingSelectId, nodes, onNodesChange]);
+
+  // The editor is mounted once and then kept — sliding it out rather than
+  // unmounting it. Remounting meant re-booting Monaco (and re-creating every
+  // file model) on each switch, which is most of what made the transition feel
+  // laggy; keeping it also lets it stay rendered while it animates away.
+  const [editorMounted, setEditorMounted] = useState(false);
+
+  // Generating the project is deliberately kept warm once the editor exists,
+  // so switching into Code costs nothing but the animation. Until then — the
+  // common case of someone who only ever uses the canvas — it's never run.
+  const { files, nodeFileMap, fileNodeMap } = useMemo(() => {
+    if (!isSplit && !editorMounted) return { files: [], nodeFileMap: new Map(), fileNodeMap: new Map() };
+    try {
+      return buildProjectFiles(nodes, edges, projectConfig);
+    } catch {
+      return { files: [], nodeFileMap: new Map(), fileNodeMap: new Map() };
+    }
+  }, [nodes, edges, isSplit, editorMounted, projectConfig]);
+
+  // Every route into Code goes through here, so the editor's one-time mount is
+  // recorded at the point of intent rather than inferred from state later.
+  const changeViewMode = useCallback((mode) => {
+    if (mode === 'code') setEditorMounted(true);
+    setViewMode(mode);
   }, []);
 
+  const cycleViewMode = useCallback(() => {
+    setViewMode((v) => {
+      const next = v === 'canvas' ? 'code' : 'canvas';
+      if (next === 'code') setEditorMounted(true);
+      return next;
+    });
+  }, []);
+
+  // ── Keep the diagram centred in whatever width the canvas pane has ──
+  //
+  // Opening the code pane halves the canvas, which would otherwise leave the
+  // diagram hanging off the right edge. This re-centres it and zooms to fit.
+  //
+  // The transform is computed from the pane's *own* measured box and applied
+  // with `setViewport`, deliberately avoiding both of React Flow's convenience
+  // helpers:
+  //   - `fitView` only queues a fit, and the queue isn't drained again after
+  //     the initial mount, so post-resize calls silently do nothing.
+  //   - `setCenter` derives the transform from React Flow's stored width,
+  //     which still holds the pre-transition size when the pane has just been
+  //     halved — it centres the diagram against 1680px inside an 840px pane,
+  //     i.e. hard against the right edge.
+  // Measuring here sidesteps that race entirely.
+  //
+  // Node state is read from the store at call time rather than through a
+  // dependency, so this doesn't re-run on every node change — that would yank
+  // the viewport out from under a node being dragged.
+  const storeApi = useStoreApi();
+
+  // Re-frames onto an explicit pane size. Split out so the mode switch can
+  // pass its *target* size before the pane has actually got there.
+  const recentreOn = useCallback((w, h, duration) => {
+    const bounds = measureNodeBounds([...storeApi.getState().nodeLookup.values()]);
+    if (!w || !h || !bounds) return;
+    // 1.2 leaves ~10% breathing room on each side.
+    const zoom = Math.max(
+      0.1,
+      Math.min(w / (bounds.width * 1.2), h / (bounds.height * 1.2), 1.2)
+    );
+    setViewport(
+      { x: w / 2 - bounds.centerX * zoom, y: h / 2 - bounds.centerY * zoom, zoom },
+      { duration }
+    );
+  }, [storeApi, setViewport]);
+
+  // On a mode switch the target width is known before the pane reaches it, so
+  // the diagram is sent on its way immediately, on the same clock as the
+  // panels. Waiting for the resize to settle first read as two separate
+  // animations: the panel slides, then the diagram belatedly jumps after it.
+  useEffect(() => {
+    if (presentationMode) return;
+    const row = workspaceRef.current;
+    if (!row) return;
+    const { width: rowW, height: rowH } = row.getBoundingClientRect();
+    const targetW = isSplit ? rowW * (1 - splitRatio) : rowW;
+    // A frame's grace so the new layout is committed before we measure nodes.
+    const frame = requestAnimationFrame(() => recentreOn(targetW, rowH, PANE_MS));
+    return () => cancelAnimationFrame(frame);
+    // Deliberately not keyed on splitRatio: dragging the divider is handled by
+    // the observer below, and re-framing on every drag frame would fight it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSplit, presentationMode, recentreOn]);
+
+  useEffect(() => {
+    const pane = canvasPaneRef.current;
+    if (!pane || presentationMode || typeof ResizeObserver === 'undefined') return;
+
+    let timer;
+    const recentre = () => {
+      const { width: w, height: h } = pane.getBoundingClientRect();
+      recentreOn(w, h, 300);
+    };
+
+    // Debounced, and longer than the pane transition so it acts purely as a
+    // correction (window resize, divider drag) rather than racing the switch
+    // animation the effect above already owns.
+    const observer = new ResizeObserver(() => {
+      clearTimeout(timer);
+      timer = setTimeout(recentre, PANE_MS + 60);
+    });
+    observer.observe(pane);
+    return () => { observer.disconnect(); clearTimeout(timer); };
+  }, [presentationMode, recentreOn]);
+
+  const highlightNodeFromFile = useCallback((filePath) => {
+    const nodeId = getNodeForFile(fileNodeMap, filePath);
+    if (!nodeId) return;
+    const node = nodes.find((n) => n.id === nodeId);
+    if (!node) return;
+    onNodesChange(nodes.map((n) => ({ id: n.id, type: 'select', selected: n.id === nodeId })));
+    setCenter(node.position.x + 125, node.position.y + 60, { zoom: 1, duration: 400 });
+  }, [fileNodeMap, nodes, onNodesChange, setCenter]);
+
+  const handleSelectFile = useCallback((path) => {
+    setEditingNodeId(null);
+    setActiveFilePath(path);
+    highlightNodeFromFile(path);
+  }, [highlightNodeFromFile]);
+
+  const handleEditNodeCode = useCallback((nodeId, code) => {
+    updateNodeData(nodeId, { code });
+  }, [updateNodeData]);
+
+  // Both code-bearing node types now resolve to a real generated file — a
+  // Custom middleware owns its own, and a Logic Hook is tracked onto its
+  // entity's hooks file — so "view generated" always has somewhere to land.
+  const handleStopEditingNode = useCallback(() => {
+    const primary = editingNode ? getPrimaryFileForNode(nodeFileMap, editingNode.id) : null;
+    if (primary) setActiveFilePath(primary);
+    setEditingNodeId(null);
+  }, [editingNode, nodeFileMap]);
+
+  const handleDividerMouseDown = useCallback((e) => {
+    e.preventDefault();
+    setIsDraggingDivider(true);
+    // Without these the drag selects text across both panes and the cursor
+    // flickers back to the default every time it crosses the editor.
+    const { body } = document;
+    const prevSelect = body.style.userSelect;
+    const prevCursor = body.style.cursor;
+    body.style.userSelect = 'none';
+    body.style.cursor = 'col-resize';
+
+    const onMove = (moveEvent) => {
+      if (!workspaceRef.current) return;
+      const rect = workspaceRef.current.getBoundingClientRect();
+      const ratio = (moveEvent.clientX - rect.left) / rect.width;
+      setSplitRatio(Math.min(0.8, Math.max(0.2, ratio)));
+    };
+    const onUp = () => {
+      setIsDraggingDivider(false);
+      body.style.userSelect = prevSelect;
+      body.style.cursor = prevCursor;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
+
+  // ── Node click ──
+  // Only meaningful while the editor is visible: in Design mode there's no
+  // pane to drive, and latching editingNodeId there meant a later switch to
+  // Code opened a node editor the user never asked for.
+  const onNodeClick = useCallback((_, node) => {
+    if (viewMode === 'canvas') return;
+
+    const isCodeBearing = node.type === 'logicNode'
+      || (node.type === 'middlewareNode' && node.data?.middlewareType === 'Custom');
+    setEditingNodeId(isCodeBearing ? node.id : null);
+
+    const primary = getPrimaryFileForNode(nodeFileMap, node.id);
+    if (primary) setActiveFilePath(primary);
+  }, [viewMode, nodeFileMap]);
+
+  // Deselecting is what closes the inspector — no separate dismiss needed.
   const onPaneClick = useCallback(() => {
-    setSelectedNodeId(null);
     setContextMenu({ open: false, x: 0, y: 0 });
   }, []);
 
@@ -191,13 +470,17 @@ function BuilderCanvas({ workflow, isTemplate }) {
       if (e.key === 's' && !e.ctrlKey && !['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target?.tagName)) {
         setSnapEnabled(v => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'e') {
+        e.preventDefault();
+        cycleViewMode();
+      }
       if (e.key === 'Escape' && presentationMode) {
         setPresentationMode(false);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [presentationMode]);
+  }, [presentationMode, cycleViewMode]);
 
   useEffect(() => { startBuilderTour(); }, []);
 
@@ -272,6 +555,47 @@ function BuilderCanvas({ workflow, isTemplate }) {
     finally { setIsExporting(false); }
   }, [workflow.name, canvasTheme]);
 
+  // ── Copy the file currently open in the editor ──
+  const handleCopyActiveFile = useCallback(async () => {
+    const file = editingNode
+      ? { path: editingNode.data?.name || editingNode.id, content: editingNode.data?.code || '' }
+      : files.find((f) => f.path === activeFilePath) || files[0];
+    if (!file) return;
+    try {
+      await navigator.clipboard.writeText(file.content || '');
+      showToast?.(`Copied ${file.path}`, 'info');
+    } catch {
+      // Clipboard access is permission-gated (and blocked outside a secure
+      // context) — say so rather than reporting a copy that never happened.
+      showToast?.('Clipboard blocked by the browser', 'error');
+    }
+  }, [files, activeFilePath, editingNode, showToast]);
+
+  // ── Use this template (creates a real project from it) ──
+  const handleUseTemplate = useCallback(async () => {
+    const isLoggedIn = !!localStorage.getItem('architect_user');
+    if (!isLoggedIn) {
+      sessionStorage.setItem('architect_load_template', JSON.stringify({
+        name: workflow.name, nodes, edges, documentation: documentation || `# ${workflow.name}\n\n`,
+      }));
+      navigate('/login?mode=signup');
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const res = await api('/workflows', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: `${workflow.name} Project`,
+          architecture_json: { nodes, edges, documentation, database: 'mongodb' },
+        }),
+      });
+      const data = await res.json();
+      navigate(data.id ? `/workflow/${data.id}` : '/login');
+    } catch { navigate('/login'); }
+    finally { setIsGenerating(false); }
+  }, [workflow.name, nodes, edges, documentation, navigate]);
+
   // ── Drag & drop from sidebar ──
   const onDrop = useCallback((event) => {
     event.preventDefault();
@@ -279,7 +603,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
     if (!type) return;
     const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
     const newId = addNode(type, position);
-    if (newId) { setSelectedNodeId(newId); setShowRightSidebar(true); }
+    if (newId) setPendingSelectId(newId);
   }, [addNode, screenToFlowPosition]);
 
   const onDragOver = useCallback((e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }, []);
@@ -288,7 +612,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
   const handleContextAddNode = useCallback((type) => {
     const { x, y } = screenToFlowPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
     const newId = addNode(type, { x, y });
-    if (newId) { setSelectedNodeId(newId); setShowRightSidebar(true); }
+    if (newId) setPendingSelectId(newId);
   }, [addNode, screenToFlowPosition]);
 
   // ── Live connection rectification (dims invalid drop targets while dragging) ──
@@ -321,113 +645,38 @@ function BuilderCanvas({ workflow, isTemplate }) {
 
       {/* ── Top Navigation Bar ── */}
       {!presentationMode && (
-        <header className="h-14 shrink-0 border-b border-[var(--border-main)] bg-[var(--bg-surface)] flex items-center justify-between gap-3 px-4 z-50">
-          <div className="flex items-center gap-3 min-w-0 shrink">
-            <button
-              onClick={() => {
-                if (location.state?.from) navigate(location.state.from);
-                else navigate(isTemplate ? '/templates' : '/dashboard');
-              }}
-              className="p-1.5 hover:bg-[var(--bg-app)] rounded-lg transition-colors text-[var(--text-main)]"
-            >
-              <ArrowLeft size={18} />
-            </button>
-            <div className="h-5 w-px bg-[var(--border-main)]" />
-            {isRenaming ? (
-              <input
-                autoFocus type="text" value={tempName}
-                onChange={(e) => setTempName(e.target.value)}
-                onBlur={handleRename}
-                onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-                className="bg-transparent border-none outline-none font-black text-sm px-2 text-brand-500"
-              />
-            ) : (
-              <h2
-                className={`font-black text-sm px-1 ${isTemplate ? '' : 'truncate max-w-[200px]'} text-[var(--text-main)] cursor-pointer hover:text-brand-500`}
-                onClick={() => !isTemplate && setIsRenaming(true)}
-              >
-                {workflow.name}
-                {isTemplate && <span className="ml-2 text-[10px] font-bold text-brand-500 bg-brand-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider">Template</span>}
-              </h2>
-            )}
-          </div>
-          
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar shrink-0 max-w-[75vw] [&>*]:shrink-0 [&_button]:whitespace-nowrap">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleCanvasTheme}
-              title={canvasTheme === 'dark' ? 'Switch Canvas to Light Mode' : 'Switch Canvas to Dark Mode'} 
-              className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors"
-            >
-              {canvasTheme === 'dark' ? <Sun size={15} /> : <Moon size={15} />}
-            </motion.button>
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setPresentationMode(true)} title="Presentation Mode" className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors">
-              <Presentation size={15} />
-            </motion.button>
-            {!isTemplate && (
-              <>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowAIModal(true)} title="AI Architect — generate a workflow from a prompt" className="bg-violet-500/10 border border-violet-500/30 hover:border-violet-500 px-3 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 text-violet-500 transition-colors">
-                  <Sparkles size={15} /> AI Architect
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={handleExportImage} disabled={isExporting} title="Export as PNG" className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors">
-                  {isExporting ? <Loader2 size={15} className="animate-spin" /> : <Image size={15} />}
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowIntelligencePanel(true)} title="Architecture Intelligence" className="bg-amber-500/10 border border-amber-500/30 hover:border-amber-500 p-2 rounded-lg text-amber-500 transition-colors">
-                  <Zap size={15} className="fill-amber-500/20" />
-                </motion.button>
-                <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowShortcutsModal(true)} title="Keyboard Shortcuts" className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 p-2 rounded-lg text-[var(--text-muted)] hover:text-brand-500 transition-colors">
-                  <Keyboard size={15} />
-                </motion.button>
-              </>
-            )}
-            <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowReadmeModal(true)} className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 text-[var(--text-main)] transition-colors">
-              <BookOpen size={15} /> Readme
-            </motion.button>
-            {!isTemplate && (
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} onClick={() => setShowPreviewModal(true)} className="bg-[var(--bg-app)] border border-[var(--border-main)] hover:border-brand-500 px-3 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-2 text-[var(--text-main)] transition-colors">
-                <Eye size={15} /> Preview
-              </motion.button>
-            )}
-            
-            <div className="h-5 w-px bg-[var(--border-main)] mx-1" />
-            
-            {isTemplate ? (
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={async () => {
-                  const isLoggedIn = !!localStorage.getItem('architect_user');
-                  if (!isLoggedIn) {
-                    sessionStorage.setItem('architect_load_template', JSON.stringify({ name: workflow.name, nodes, edges, documentation: documentation || `# ${workflow.name}\n\n` }));
-                    navigate('/login?mode=signup'); return;
-                  }
-                  setIsGenerating(true);
-                  try {
-                    const res = await api('/workflows', { method: 'POST', body: JSON.stringify({ name: `${workflow.name} Project`, architecture_json: { nodes, edges, documentation, database: 'mongodb' } }) });
-                    const data = await res.json();
-                    navigate(data.id ? `/workflow/${data.id}` : '/login');
-                  } catch { navigate('/login'); }
-                  finally { setIsGenerating(false); }
-                }}
-                disabled={isGenerating}
-                className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
-                Use Template
-              </motion.button>
-            ) : (
-              <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                onClick={handleGenerate}
-                disabled={isGenerating}
-                id="tour-generate-btn"
-                className="bg-brand-500 hover:bg-brand-600 text-white px-4 py-1.5 rounded-lg text-sm font-bold flex items-center gap-2 transition-colors disabled:opacity-50"
-              >
-                {isGenerating ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-                Generate
-              </motion.button>
-            )}
-          </div>
-        </header>
+        <BuilderHeader
+          workflow={workflow}
+          isTemplate={isTemplate}
+          viewMode={viewMode}
+          onViewModeChange={changeViewMode}
+          isRenaming={isRenaming}
+          tempName={tempName}
+          onTempNameChange={setTempName}
+          onStartRename={() => setIsRenaming(true)}
+          onCommitRename={handleRename}
+          onBack={() => {
+            if (location.state?.from) navigate(location.state.from);
+            else navigate(isTemplate ? '/templates' : '/dashboard');
+          }}
+          canvasTheme={canvasTheme}
+          onToggleCanvasTheme={toggleCanvasTheme}
+          onOpenAI={() => setShowAIModal(true)}
+          onOpenIntelligence={() => setShowIntelligencePanel(true)}
+          onOpenConfig={() => setShowConfigModal(true)}
+          onOpenShortcuts={() => setShowShortcutsModal(true)}
+          onOpenReadme={() => setShowReadmeModal(true)}
+          onExportImage={handleExportImage}
+          onPresent={() => setPresentationMode(true)}
+          isExporting={isExporting}
+          onGenerate={handleGenerate}
+          onUseTemplate={handleUseTemplate}
+          isGenerating={isGenerating}
+          activeFilePath={activeFilePath}
+          onCopyActiveFile={handleCopyActiveFile}
+        />
       )}
+
 
       {/* ── Main Workspace Area ── */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -443,33 +692,37 @@ function BuilderCanvas({ workflow, isTemplate }) {
         </div>
       )}
 
-      {/* ── Left Sidebar ── */}
-      {!presentationMode && !isTemplate && (
-        <>
-          <motion.div
-            id="tour-node-sidebar"
-            animate={{ width: showLeftSidebar ? 288 : 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="h-full shrink-0 overflow-hidden border-r border-[var(--border-main)]"
-          >
-            <NodeSidebar onAddNode={handleContextAddNode} />
-          </motion.div>
-
-          <button
-            onClick={() => setShowLeftSidebar(!showLeftSidebar)}
-            className="absolute top-1/2 -translate-y-1/2 z-20 p-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-r-xl shadow-lg hover:text-brand-500 transition-all"
-            style={{ left: showLeftSidebar ? 287 : 0 }}
-          >
-            {showLeftSidebar ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-          </button>
-        </>
+      {/* ── Node palette: icon rail, flyout on demand ── */}
+      {showPalette && (
+        <NodePalette onAddNode={handleContextAddNode} compactRail={isSplit} />
       )}
 
-      {/* ── Canvas ── */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className={`flex-1 h-full relative ${canvasTheme}`}
+      {/* ── Editor ↔ Canvas workspace row ──
+          Panes are absolutely positioned rather than flexed so the switch can
+          be choreographed: the editor group slides in from the left on
+          `transform` while the canvas gives up the width it slides into. The
+          row's own background matches the editor surface, so there's never a
+          bare strip behind the incoming panel. */}
+      <div ref={workspaceRef} className="flex-1 h-full relative overflow-hidden bg-[var(--bg-sidebar)]">
+
+      {/* ── Canvas (right) ──
+          Anchored to the right and giving up width from the left, so its left
+          edge tracks the incoming editor's right edge exactly — same duration,
+          same easing, no gap opening between them.
+
+          Width is a plain CSS transition, not a framer-motion `animate`:
+          framer resolves a percentage target to pixels against the layout as
+          it was when the tween started, so switching modes left the canvas at
+          30% when 60% was asked for. CSS interpolates percentages correctly
+          and keeps both panes on the same timing curve. */}
+      <div
+        ref={canvasPaneRef}
+        className={`absolute inset-y-0 right-0 overflow-hidden ${canvasTheme}`}
+        style={{
+          width: isSplit ? `${(1 - splitRatio) * 100}%` : '100%',
+          transition: isDraggingDivider ? 'none' : `width ${PANE_MS}ms ${PANE_EASE}`,
+          willChange: 'width',
+        }}
         onDrop={isTemplate ? undefined : onDrop}
         onDragOver={isTemplate ? undefined : onDragOver}
         id="tour-canvas"
@@ -489,7 +742,6 @@ function BuilderCanvas({ workflow, isTemplate }) {
           onNodeClick={onNodeClick}
           onPaneClick={onPaneClick}
           onPaneContextMenu={onPaneContextMenu}
-          nodeTypes={nodeTypes}
           nodesDraggable={!isTemplate}
           nodesConnectable={!isTemplate}
           elementsSelectable={!isTemplate}
@@ -515,13 +767,14 @@ function BuilderCanvas({ workflow, isTemplate }) {
             />
           )}
 
-          {!presentationMode && (
-            <>
-              <Controls
-                className="!bg-[var(--bg-surface)] !border-[var(--border-main)] !shadow-xl !rounded-xl overflow-hidden"
-              />
+          {/* React Flow's own <Controls> is gone — CanvasToolbar already carries
+              zoom in/out/fit, and three floating clusters was two too many.
+              The minimap is suppressed in Split: at half width it covers the
+              nodes it's supposed to be summarising. */}
+          {!presentationMode && showMiniMap && !isSplit && (
               <MiniMap
-                className="!bg-[var(--bg-surface)] !border-[var(--border-main)] !shadow-xl !rounded-2xl"
+                pannable zoomable
+                className="!bg-[var(--bg-surface)] !border-[var(--border-main)] !shadow-xl !rounded-2xl !mb-20"
                 nodeColor={(n) => {
                   const colorMap = {
                     entityNode: '#10b981', apiNode: '#3b82f6', authNode: '#f59e0b',
@@ -536,10 +789,7 @@ function BuilderCanvas({ workflow, isTemplate }) {
                 }}
                 maskColor="rgba(0,0,0,0.06)"
               />
-            </>
           )}
-
-          {/* Panels removed and moved to the unified header above */}
         </ReactFlow>
 
         {/* ── Floating Canvas Toolbar (bottom-center) ── */}
@@ -549,6 +799,8 @@ function BuilderCanvas({ workflow, isTemplate }) {
             onGridModeChange={setGridMode}
             snapEnabled={snapEnabled}
             onSnapToggle={() => setSnapEnabled(v => !v)}
+            miniMapOpen={showMiniMap}
+            onMiniMapToggle={() => setShowMiniMap(v => !v)}
           />
         )}
 
@@ -561,28 +813,120 @@ function BuilderCanvas({ workflow, isTemplate }) {
           onFitView={() => fitView({ padding: 0.15, duration: 400 })}
           onAddNode={handleContextAddNode}
         />
-      </motion.div>
+      </div>
 
-      {/* ── Right Sidebar ── */}
-      {!presentationMode && !isTemplate && (
-        <>
-          <button
-            onClick={() => setShowRightSidebar(!showRightSidebar)}
-            className="absolute top-1/2 -translate-y-1/2 z-20 p-1.5 bg-[var(--bg-surface)] border border-[var(--border-main)] rounded-l-xl shadow-lg hover:text-brand-500 transition-all"
-            style={{ right: showRightSidebar ? 319 : 0 }}
+      {/* ── Editor group (left): panel + divider ──
+          Editor and divider travel together as one block so the seam stays
+          welded to the panel's edge. It slides on `transform` alone — Monaco's
+          width never changes, so it doesn't re-layout on every frame of the
+          animation, which is what made the old width-tween stutter.
+
+          Mounted for good after the first open (see `editorMounted`) so the
+          panel is still rendered while it animates out, and so re-entering
+          Code doesn't pay to boot Monaco again. */}
+      {editorMounted && (
+        <div
+          className="absolute inset-y-0 left-0 z-20 flex"
+          style={{
+            width: `${splitRatio * 100}%`,
+            transform: isSplit ? 'translateX(0)' : 'translateX(-100%)',
+            transition: isDraggingDivider ? 'none' : `transform ${PANE_MS}ms ${PANE_EASE}`,
+            willChange: 'transform',
+            // Off-screen it must not be clickable or reachable by tab.
+            pointerEvents: isSplit ? 'auto' : 'none',
+          }}
+          aria-hidden={!isSplit}
+          inert={!isSplit}
+        >
+          <div className="flex-1 min-w-0 h-full">
+            <CodeEditorPanel
+              files={files}
+              activeFilePath={activeFilePath}
+              onSelectFile={handleSelectFile}
+              editingNode={editingNode}
+              onEditNodeCode={handleEditNodeCode}
+              onStopEditingNode={handleStopEditingNode}
+              onRevealNode={highlightNodeFromFile}
+            />
+          </div>
+
+          {/* ── Split divider ──
+              8px of hit area around a 1px rule: a 1px target is a miss most of
+              the time, but an 8px visible bar is a seam down the middle. */}
+          <div
+            onMouseDown={handleDividerMouseDown}
+            onDoubleClick={() => setSplitRatio(0.5)}
+            title="Drag to resize · double-click to even out"
+            role="separator"
+            aria-orientation="vertical"
+            className="w-2 shrink-0 cursor-col-resize relative group flex items-center justify-center"
           >
-            {showRightSidebar ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
+            <span className={`absolute inset-y-0 left-1/2 -translate-x-1/2 w-px transition-colors ${
+              isDraggingDivider ? 'bg-brand-500' : 'bg-[var(--border-main)] group-hover:bg-brand-500'
+            }`} />
+            <span className={`relative h-8 w-1 rounded-full transition-all ${
+              isDraggingDivider ? 'bg-brand-500' : 'bg-transparent group-hover:bg-brand-500/60'
+            }`} />
+          </div>
+        </div>
+      )}
 
-          <motion.div
-            animate={{ width: showRightSidebar ? 320 : 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="h-full shrink-0 overflow-hidden border-l border-[var(--border-main)] bg-[var(--bg-surface)]"
+      </div> {/* End Editor ↔ Canvas workspace row */}
+
+      {/* ── Inspector ──
+          Opens on selection, closes on deselect. Docked in Design mode; in
+          Split it floats over the canvas so neither pane gets squeezed. */}
+      {/* Stays mounted while the mode allows it so the panel keeps its own tab
+          state between selections; open/closed is a CSS transition for the same
+          reason the canvas uses one. */}
+      {inspectorMounted && (
+          <div
+            className={`h-full overflow-hidden border-l border-[var(--border-main)] bg-[var(--bg-surface)]
+              transition-[width,opacity,transform] duration-300 ease-out ${
+              inspectorFloats
+                ? `absolute right-0 top-0 bottom-0 w-80 z-30 shadow-2xl shadow-black/30 ${
+                    showInspector ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-full pointer-events-none'
+                  }`
+                : 'shrink-0'
+            }`}
+            style={inspectorFloats ? undefined : { width: showInspector ? 320 : 0 }}
+            aria-hidden={!showInspector}
             id="tour-properties-panel"
           >
-            <PropertiesPanel nodeId={selectedNodeId} />
-          </motion.div>
-        </>
+            <div className="w-80 h-full flex flex-col">
+              <div className="h-8 shrink-0 flex items-center justify-between px-3 border-b border-[var(--border-main)]">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-muted)]">
+                  Inspector
+                </span>
+                <div className="flex items-center gap-0.5">
+                  {!inspectorFloats && (
+                    <button
+                      onClick={() => setInspectorPinned(v => !v)}
+                      title={inspectorPinned ? 'Unpin — close when nothing is selected' : 'Keep inspector open'}
+                      className={`p-1 rounded-md transition-colors ${
+                        inspectorPinned ? 'text-brand-500 bg-brand-500/10' : 'text-[var(--text-muted)] hover:text-[var(--text-main)]'
+                      }`}
+                    >
+                      <Pin size={12} />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setInspectorPinned(false);
+                      onNodesChange(nodes.map(n => ({ id: n.id, type: 'select', selected: false })));
+                    }}
+                    title="Close inspector"
+                    className="p-1 rounded-md text-[var(--text-muted)] hover:text-[var(--text-main)] transition-colors"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 min-h-0">
+                <PropertiesPanel />
+              </div>
+            </div>
+          </div>
       )}
       </div> {/* End Workspace Area */}
 
@@ -592,6 +936,9 @@ function BuilderCanvas({ workflow, isTemplate }) {
       {/* ── AI Architect ── */}
       <AIArchitectModal isOpen={showAIModal} onClose={() => setShowAIModal(false)} />
 
+      {/* ── Project Config ── */}
+      <ProjectConfigPanel isOpen={showConfigModal} onClose={() => setShowConfigModal(false)} />
+
       {/* ── Pre-generation validation report ── */}
       <ValidationReportModal
         isOpen={!!validationReport}
@@ -600,35 +947,6 @@ function BuilderCanvas({ workflow, isTemplate }) {
         onProceed={doGenerate}
         isGenerating={isGenerating}
       />
-
-      {/* ── Preview Modal ── */}
-      <AnimatePresence>
-        {showPreviewModal && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-center justify-center p-4 md:p-10"
-          >
-            <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }}
-              className="bg-[var(--bg-surface)] w-full max-w-6xl h-full rounded-[2.5rem] border border-[var(--border-main)] shadow-2xl flex flex-col overflow-hidden"
-            >
-              <div className="p-6 border-b border-[var(--border-main)] flex items-center justify-between shrink-0 bg-[var(--bg-sidebar)]">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 bg-brand-500/10 rounded-2xl text-brand-500"><Code2 size={24} /></div>
-                  <div>
-                    <h2 className="text-xl font-black text-[var(--text-main)]">Architecture Preview</h2>
-                    <p className="text-sm text-[var(--text-muted)] font-medium">Verify your generated backend structure</p>
-                  </div>
-                </div>
-                <button onClick={() => setShowPreviewModal(false)} className="p-2.5 hover:bg-[var(--bg-app)] rounded-2xl transition-colors text-[var(--text-muted)] hover:text-red-500">
-                  <X size={24} />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <CodePreview nodes={nodes} edges={edges} />
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* ── Readme Modal ── */}
       <AnimatePresence>

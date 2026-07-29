@@ -8,7 +8,9 @@ import { NODE_SHAPE_CONFIG } from './nodes/nodeShapeConfig';
 import TechIcon from './nodes/TechIcons';
 
 // ── Node Category Definitions ─────────────────────────────────────────────────
-const CATEGORIES = [
+// Exported so the Builder's collapsed palette rail (NodePalette) can render the
+// same categories and cards without duplicating the taxonomy.
+export const CATEGORIES = [
   {
     name: 'Core',
     color: '#10b981',
@@ -55,7 +57,7 @@ const CATEGORIES = [
 ];
 
 // ── Single Node Card ──────────────────────────────────────────────────────────
-function NodeCard({ type, onAddNode, onPinToggle, isPinned, compact = false }) {
+export function NodeCard({ type, onAddNode, onPinToggle, isPinned, compact = false }) {
   const config = NODE_SHAPE_CONFIG[type] || {};
   const label = config.label || type;
   const icon  = config.techIcon;

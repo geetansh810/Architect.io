@@ -1,6 +1,9 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 import { validateConnection, ANNOTATION_TYPES } from '../utils/connectionRules';
+import { DEFAULT_PROJECT_CONFIG } from '../generators/mern/utils/projectConfig.js';
+
+export { DEFAULT_PROJECT_CONFIG };
 
 const ArchitectureContext = createContext();
 
@@ -39,18 +42,32 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
   const [nodes, setNodes] = useState(() => buildInitialNodes(initialData));
   const [edges, setEdges] = useState(initialData?.edges || []);
   const [documentation, setDocumentation] = useState(initialData?.documentation || '');
+  const [projectConfig, setProjectConfig] = useState({ ...DEFAULT_PROJECT_CONFIG, ...initialData?.projectConfig });
   const [pendingConnection, setPendingConnection] = useState(null);
   const [toastMessage, setToastMessage] = useState(null);
 
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  const takeSnapshot = useCallback((newNodes, newEdges) => {
-    setHistory(prev => {
-      const nextHistory = prev.slice(0, historyIndex + 1);
-      return [...nextHistory, { nodes: newNodes || nodes, edges: newEdges || edges }];
+  // Consecutive snapshots sharing a `coalesceKey` collapse into one entry, so
+  // typing in a text field or the code editor costs one undo step instead of
+  // one per character.
+  const lastSnapshotRef = useRef({ key: null, at: 0 });
+
+  const takeSnapshot = useCallback((newNodes, newEdges, coalesceKey = null) => {
+    const now = Date.now();
+    const prev = lastSnapshotRef.current;
+    const merge = coalesceKey !== null && prev.key === coalesceKey && now - prev.at < 800;
+    lastSnapshotRef.current = { key: coalesceKey, at: now };
+
+    setHistory(prevHistory => {
+      const trimmed = prevHistory.slice(0, historyIndex + 1);
+      const entry = { nodes: newNodes || nodes, edges: newEdges || edges };
+      return merge && trimmed.length
+        ? [...trimmed.slice(0, -1), entry]
+        : [...trimmed, entry];
     });
-    setHistoryIndex(prev => prev + 1);
+    if (!merge) setHistoryIndex(prev => prev + 1);
   }, [nodes, edges, historyIndex]);
 
   useEffect(() => {
@@ -99,12 +116,26 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
     }
   }, []);
 
-  // Auto-save
+  const updateProjectConfig = useCallback((partial) => {
+    setProjectConfig((prev) => ({ ...prev, ...partial }));
+  }, []);
+
+  // Auto-save.
+  // Debounced because the triggers are continuous, not discrete: dragging a
+  // node and typing in the code editor both fire a state update per frame /
+  // per keystroke, and this used to mean one PUT each.
+  // Held in a ref because Builder re-creates `onSave` every render — as a
+  // dependency it would reset the debounce timer on every keystroke, which is
+  // exactly the behaviour the debounce exists to prevent.
+  const onSaveRef = useRef(onSave);
+  useEffect(() => { onSaveRef.current = onSave; });
   useEffect(() => {
-    if (onSave) {
-      onSave({ nodes, edges, documentation, database: 'mongodb' });
-    }
-  }, [nodes, edges, documentation]);
+    if (!onSaveRef.current) return;
+    const timer = setTimeout(() => {
+      onSaveRef.current({ nodes, edges, documentation, projectConfig, database: 'mongodb' });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [nodes, edges, documentation, projectConfig]);
 
   const onNodesChange = useCallback(
     (changes) => setNodes((nds) => applyNodeChanges(changes, nds)),
@@ -241,7 +272,12 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
 
     setNodes(nextNodes);
     setEdges(nextEdges);
-    takeSnapshot(nextNodes, nextEdges);
+
+    // A single string field is someone typing (name, route, hook code) — those
+    // arrive one character at a time and share an undo step.
+    const fields = Object.keys(dataUpdate);
+    const isTyping = fields.length === 1 && typeof dataUpdate[fields[0]] === 'string';
+    takeSnapshot(nextNodes, nextEdges, isTyping ? `${nodeId}:${fields[0]}` : null);
   }, [nodes, edges, takeSnapshot]);
 
   const addNode = useCallback((type, position) => {
@@ -257,9 +293,9 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       : type === 'mailNode'
       ? { provider: 'SMTP', fromEmail: 'noreply@app.com' }
       : type === 'logicNode'
-      ? { name: 'Process Payment', hook: 'before-create' }
+      ? { name: 'Process Payment', hook: 'before-create', code: '' }
       : type === 'middlewareNode'
-      ? { middlewareType: 'Rate Limiter', config: { windowMs: 15 * 60 * 1000, maxRequests: 100 } }
+      ? { middlewareType: 'Rate Limiter', config: { windowMs: 15 * 60 * 1000, maxRequests: 100 }, code: '' }
       : type === 'storageNode'
       ? { provider: 'Local (Multer)', maxSizeMB: 5, allowedTypes: ['images'] }
       : type === 'cronNode'
@@ -637,7 +673,7 @@ export function ArchitectureProvider({ children, initialData, onSave }) {
       updateNodeData,
       addNode, updateEdgeData, removeElements, setNodes, setEdges, applyAIWorkflow,
       parseToBackendPayload, pendingConnection, setPendingConnection, confirmConnection,
-      documentation, setDocumentation, onNodesDelete, toastMessage, showToast,
+      documentation, setDocumentation, projectConfig, updateProjectConfig, onNodesDelete, toastMessage, showToast,
       undo, redo, canUndo, canRedo, clipboard, copyNodes, pasteNodes, duplicateNodes,
       autoLayout, alignNodes, distributeNodes, selectAll, onNodeDragStop
     }}>

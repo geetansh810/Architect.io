@@ -19,8 +19,8 @@ const NODE_DEFAULTS = {
   authNode: { method: 'JWT', expiry: '24h', secret: '' },
   dbNode: { type: 'mongodb', dbName: 'app_db', uri: '' },
   mailNode: { provider: 'SMTP', fromEmail: 'noreply@app.com' },
-  logicNode: { name: 'Process Data', hook: 'before-create' },
-  middlewareNode: { middlewareType: 'Rate Limiter', config: { windowMs: 900000, maxRequests: 100 } },
+  logicNode: { name: 'Process Data', hook: 'before-create', code: '' },
+  middlewareNode: { middlewareType: 'Rate Limiter', config: { windowMs: 900000, maxRequests: 100 }, code: '' },
   storageNode: { provider: 'Local (Multer)', maxSizeMB: 5, allowedTypes: ['images'] },
   cronNode: { jobName: 'dailyCleanup', schedule: '0 0 * * *' },
   webhookNode: { direction: 'Incoming', provider: 'Stripe', path: '/stripe-webhooks' },
@@ -65,8 +65,8 @@ const SYSTEM_INSTRUCTION = `You are BackendFlow's AI Solutions Architect. You de
 - dbNode: { "type": "mongodb", "dbName": snake_case } — primary database (exactly one when entities exist).
 - replicaNode: { "replicaCount": int, "strategy": "Read/Write Split", "lagToleranceMs": int }
 - cacheNode: { "provider": "Redis", "evictionPolicy": "LRU"|"LFU", "ttl": seconds, "strategy": "Cache-Aside"|"Write-Through" }
-- logicNode: { "name": "Verb Phrase", "hook": "before-create"|"after-create"|"before-update"|"after-update"|"before-delete"|"after-delete" } — business logic attached to an API's lifecycle.
-- middlewareNode: { "middlewareType": "Rate Limiter"|"Logger"|"Custom", "config": { "windowMs"?: int, "maxRequests"?: int } }
+- logicNode: { "name": "Verb Phrase", "hook": "before-create"|"after-create"|"before-update"|"after-update"|"before-delete"|"after-delete", "code"?: JS function body string receiving (payload) and returning it } — business logic attached to an API's lifecycle. Only include "code" when the user's prompt implies concrete logic (e.g. "hash the password", "send a welcome email"); otherwise omit it.
+- middlewareNode: { "middlewareType": "Rate Limiter"|"Logger"|"CORS"|"Validator"|"Custom", "config": { "windowMs"?: int, "maxRequests"?: int }, "code"?: JS function body string receiving (req, res, next), only for "Custom" }
 - storageNode: { "provider": "AWS S3"|"Local (Multer)", "maxSizeMB": int, "allowedTypes": ["images"|"documents"|"videos"] }
 - cronNode: { "jobName": camelCase, "schedule": standard 5-part cron expression }
 - webhookNode: { "direction": "Incoming"|"Outgoing", "provider": string, "path": "/kebab-path" }
